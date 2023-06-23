@@ -3,6 +3,9 @@ uuid = "f372c833-81d1-4898-883d-78d2330945b5"
 authors = ["Mechanomy LLC"]
 version = "0.1.0"
 
+[deps]
+Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
+
 [compat]
 julia = "1"
 
