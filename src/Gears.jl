@@ -1,4 +1,5 @@
 module Gears
+  using Printf
 
   # References
   # 2004_oberg p1599
@@ -11,91 +12,132 @@ module Gears
 
   UnitTypes.@makeMeasure Pitch UnitTypes.AbstractMeasure 1.0 # units of 1/inch
 
-  struct GearModule
-  end
+  # struct GearModule
+  # end
 
   """
   tooth involutes are perpendicular to this circle
   in meshing gears, connecting two base circles with a tangent line will cross the involute teeth at the point of contact
   """
-  baseCircle(pitchDiameter::UnitTypes.Diameter, pressureAngle::T where T<: UnitTypes.AbstractAngle) = pitchDiameter * cos(pressureAngle)
-  """
-  meshed gears have these circles tangent
-  """
-  # pitchCircle
-
-  """
-  distance between successive involutes measured along the segment of the base circle, mating teeth must have the same base pitch length
-  """
-  basePitch(nTeeth, baseDiameter) = π*baseDiameter/nTeeth
-  
-  """
-    the arc distance between similar points on the adjacent teeth in linear units along the arc segment
-  """
-  circularPitch(pitchDiameter, nTeeth) = π*pitchDiameter / nTeeth
-  circularPitch(diametralPitch) = π/diametralPitch
-
-  """
-  module is the amount of pitch diameter per tooth, higher module larger tooth
-  """
-  gearModule(pitchDiameterMM, nTeeth) = pitchDiameterMM/nTeeth
+  baseDiameter(pitchDiameter::UnitTypes.Diameter, pressureAngle::T where T<: UnitTypes.AbstractAngle) = pitchDiameter * cos(pressureAngle)
 
   """
   the number of teeth per inch of pitch diameter, larger DP is smaller teeth; dp is not a pitch in the same sense as basePitch
   """
-  diametralPitch(circularPitch) = π/circularPitch
-  diametralPitch(nTeeth,pitchDiameter) = nTeeth/pitchDiameter
-  diametralPitch(nTeethPinion, gearRatio, centerDistance) = nTeethPinion*(gearRatio+1)/2/centerDistance
+  # diametralPitch(circularPitch) = π/circularPitch
+  diametralPitch(nTeeth::Int, pitchDiameter::Diameter) = Pitch(nTeeth/convert(Float64, convert(Inch,pitchDiameter)))
+  # diametralPitch(nTeethPinion, gearRatio, centerDistance) = nTeethPinion*(gearRatio+1)/2/centerDistance
 
-
-  centerDistance(nTeethPinion, gearRatio, diametralPitch) = nTeethPinion * (gearRatio+1) / 2 / diametralPitch
-  centerDistance(pitchDiameterPinion, pitchDiameterGear) = (pitchDiameterPinion+pitchDiameterGear)/2
-  centerDistance(nTeethPinion, nTeethGear, diametralPitch) = (nTeethPinion+nTeethGear)/ 2/ diametralPitch
-  centerDistance(nTeethPinion, nTeethGear, circularPitch) = (nTeethPinion+nTeethGear)*circularPitch /2 /π
-
-
-
-  gearRatio(nTeethPinion, nTeethGear) = nTeethGear / nTeethPinion
-
-  nTeeth(diametralPitch, pitchDiameter) = diametralPitch*pitchDiameter
-  nTeeth(pitchDiameter,circularPitch) = π*pitchDiameter/circularPitch
 
   """
   height of tooth above pitch circle
   """
-  addendum(diametral::Pitch) = 1/diametral
+  addendum(diametral::Pitch) = Inch(1/convert(Float64, diametral.value))
+
   """
   depth of tooth below pitch circle
   """
-  function dedendum(diametral::Pitch) :: T where T<:UnitTypes.AbstractExtent
-    return 1/diametral
-  end
+  dedendum(diametral::Pitch) = Inch(1.250/convert(Float64, diametral.value))
+
+
+  """
+  """
+  outsideDiameter(pitchDiameter::UnitTypes.Diameter, addendum) = pitchDiameter + Diameter(2*addendum)
+
+
+  """
+
+  """
+  rootDiameter(pitchDiameter::UnitTypes.Diameter, dedendum) = pitchDiameter - Diameter(2*dedendum)
+
+  """
+  distance between successive involutes measured along the segment of the base circle, mating teeth must have the same base pitch length
+  """
+  # basePitch(nTeeth::Int, baseDiameter::Diameter) = π*baseDiameter/nTeeth # length/tooth
+  baseInterval(nTeeth::Int, baseDiameter::Diameter) = π*convert(typeof(baseDiameter).parameters[1],baseDiameter)/nTeeth # length/tooth
+  
+  # """
+  #   the arc distance between similar points on the adjacent teeth in linear units along the arc segment
+  # """
+  # circularPitch(pitchDiameter, nTeeth) = π*pitchDiameter / nTeeth
+  # # circularPitch(diametralPitch) = π/diametralPitch
+
+  # """
+  # module is the amount of pitch diameter per tooth, higher module larger tooth
+  # """
+  # gearModule(pitchDiameterMM, nTeeth) = pitchDiameterMM/nTeeth
+
+  # gearRatio(nTeethPinion, nTeethGear) = nTeethGear / nTeethPinion
+
+  # nTeeth(diametralPitch, pitchDiameter) = diametralPitch*pitchDiameter
+  # nTeeth(pitchDiameter,circularPitch) = π*pitchDiameter/circularPitch
 
   """
   Struct to represent ANSI-specification spur gears
   """
-  struct SpurANSI
+  struct GearANSI
     nTeeth::Int
-    pressureAngle::UnitTypes.AbstractAngle
-    diametralPitch::Pitch
-    # pitchDiameter::UnitTypes.Inch
+    pitch::T where T<:UnitTypes.AbstractDiameter
+    pressure::T where T<:UnitTypes.AbstractAngle
+    diametral::Pitch
+    addendum::T where T<:UnitTypes.AbstractExtent
+    dedendum::T where T<:UnitTypes.AbstractExtent
+    outside::T where T<:UnitTypes.AbstractDiameter
+    base::T where T<:UnitTypes.AbstractDiameter
+    root::T where T<:UnitTypes.AbstractDiameter
+    baseInterval::T where T<:UnitTypes.AbstractExtent
+
+
+    # bore::UnitTypes.AbstractDiameter
+    # circularPitch::Pitch
+    # wholeDepth::UnitTypes.AbstractExtent
+    # workingDepth::UnitTypes.AbstractExtent
+    # addendum::UnitTypes.AbstractExtent
+    # dedendum::UnitTypes.AbstractExtent
+    # clearance::UnitTypes.AbstractExtent
   end
-  # struct SpurANSI
-  #   nTeeth::Int
-  #   pitch::UnitTypes.AbstractDiameter
-  #   base::UnitTypes.AbstractDiameter
-  #   root::UnitTypes.AbstractDiameter
-  #   outside::UnitTypes.AbstractDiameter
-  #   bore::UnitTypes.AbstractDiameter
-  #   circularPitch::Pitch
-  #   diametralPitch::UnitTypes.AbstractExtent
-  #   pressureAngle::UnitTypes.AbstractAngle
-  #   wholeDepth::UnitTypes.AbstractExtent
-  #   workingDepth::UnitTypes.AbstractExtent
-  #   addendum::UnitTypes.AbstractExtent
-  #   dedendum::UnitTypes.AbstractExtent
-  #   clearance::UnitTypes.AbstractExtent
-  # end
+
+
+
+  # GearANSI(; n::Int, pd::UnitTypes.Diameter{UnitTypes.Inch}, pa::UnitTypes.Degree=UnitTypes.Degree(20) ) = GearANSI( n, pd, pa, baseDiameter(pd, pa), outsideDiameter(pd,))
+  function GearANSI(; n::Int, pitch::UnitTypes.Diameter{UnitTypes.Inch}, pressure::UnitTypes.Degree=UnitTypes.Degree(20))#, bore::Diameter{Inch}=0 ) 
+    bd = baseDiameter(pitch,pressure)
+    dp = diametralPitch(n, pitch)
+    ad = addendum(dp)
+    dd = dedendum(dp)
+    od = outsideDiameter(pitch, ad)
+    rd = rootDiameter(pitch, dd)
+    bi = baseInterval(n, bd)
+    return GearANSI( n, pitch, pressure, dp, ad, dd, od, bd, rd, bi)
+  end
+
+  """
+      pulley2String(p::PlainPulley) :: String
+    Returns a descriptive string of the given PlainPulley `p` of the form:
+      PlainPulley[struct] @ [1.000mm,2.000mm] r[3.000mm] arrive[57.296°] depart[114.592°] aWrap[57.296°] lWrap[3.000mm]"
+  """
+  function gear2string(g::GearANSI)::String 
+    # return @sprintf("GearANSI:\n nTeeth: %d \n pressureAngleDegree: %3.3f[°] \n pitchDiameterInch: %3.3f[in], diametralPitch: %3.3f[1/in]",
+    #   g.nTeeth,
+    #   convert(Float64, g.pressureAngle.value),
+    #   convert(Float64, g.pitchDiameter.value),
+    #   convert(Float64, g.diametralPitch.value)
+    # )
+    return "GearANSI: $(g.nTeeth) teeth $(g.pitch) $(g.diametral)"
+  end
+
+  """
+      Base.show(io::IO, p::AbstractPulley)
+    Function to `show()` a AbstractPulley via [`pulley2String`](#BeltTransmission.pulley2String).
+  """
+  function Base.show(io::IO, g::GearANSI)
+    print(io, gear2string(g))
+  end
+
+
+
+
+
 
   # nTeeth diameter to module .. 
 
