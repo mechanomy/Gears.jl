@@ -1,13 +1,20 @@
 using Test
 using Plots
+gr()
+# plotly()
+# pythonplot()
 using Gears
 using UnitTypes
+
 
 
 @testset "functions" begin
   n = 30
   pa = Degree(20)
-  pd = Diameter(Inch(1.250))
+  dp = Gears.Pitch(24)
+
+  pd = Gears.pitchDiameter(n, dp) #Diameter(Inch(1.250))
+  pd = Gears.pitchDiameter(dp, n) #Diameter(Inch(1.250))
 
   bd = Gears.baseDiameter(pd, pa)
   @test isapprox(bd, Inch(1.1746), atol=1e-3)
@@ -34,24 +41,59 @@ using UnitTypes
 end
 
 @testset "GearANSI" begin
-
   # https://shop.sdp-si.com/catalog/product/?id=S10C9Z-024H030
   nTeeth = 30
   pressureAngleDegree = Degree(20)
-  # diametralPitch = 24
+  diametralPitch = Gears.Pitch(24)
   pitchDiameterInch = Diameter(Inch(1.250))
-  boreInch = Inch(0.4998)
+  addendum = Inch(1/24)
+  dedendum = Inch(1.25/24)
+  outside = Diameter(Inch(1.333))
+  base = Diameter(Inch(1.1746))
+  root = Diameter(Inch(1.1458))
+  baseInterval = Inch(0.12300)
+  # boreInch = Inch(0.4998)
   # hubDiameterInch = 0.75
   # faceWidthInch = 0.3750
   # agmaQualityClass = 10
 
-  # @show convert(Float64, boreInch)
-  # @show convert(Float64, pressureAngleDegree)
-  # @show convert(Float64, pitchDiameterInch)
 
-  @show s = Gears.GearANSI( n=nTeeth, pitch=pitchDiameterInch, pressure=pressureAngleDegree )
+  #constructor permutations
+  gref = Gears.GearANSI( nTeeth, pitchDiameterInch, pressureAngleDegree, diametralPitch, addendum, dedendum, outside, base, root, baseInterval )
+  @test typeof(gref) <: Gears.GearANSI
 
+  @test typeof(Gears.GearANSI(nTeeth, diametralPitch)) <: Gears.GearANSI
+  @test typeof(Gears.GearANSI(nTeeth, diametralPitch, pressureAngleDegree)) <: Gears.GearANSI
+  @test typeof(Gears.GearANSI(diametralPitch, nTeeth, pressureAngleDegree)) <: Gears.GearANSI
+  @test typeof(Gears.GearANSI( 30, Diameter(Inch(1.250)), Degree(20) )) <: Gears.GearANSI
+  # @test typeof(Gears.GearANSI( 30, Diameter(MilliMeter(31.75)), Degree(20) )) <: Gears.GearANSI
 end
+
+@testset "calcThetaHeight" begin
+  g = Gears.GearANSI( 30, Diameter(Inch(1.250)), Degree(20) )
+
+  # @show thetaH = Gears.InvoluteTooth.calcThetaHeight(r=convert(Radius,g.base), gm=Degree(45), al=Degree(40), toothHeight=convert(Meter,(g.outside-g.base)/2) )
+  # @test isapprox(thetaH, 7.9524, atol=1e-3)
+  # @test typeof(thetaH) <: AbstractExtent
+end
+
+@testset "gear to plane points" begin
+  # g = Gears.GearANSI( n=30, pitch=Diameter(Inch(1.250)), pressure=Degree(20) ) #sdpsi_S10C9Z-024H030
+  g = Gears.GearANSI( 70, Diameter(Inch(2.9167)), Degree(20) ) #sdpsi_S1268Z-024A070
+  # @show g = Gears.GearANSI( Gears.Pitch(24), Diameter(Inch(100*2/25.4)), Degree(20) ) not working, need to do coercion
+  # @show g = Gears.GearANSI(Gears.Pitch(24), 130, Degree(20) )
+  # @show g = Gears.GearANSI(Gears.Pitch(24), 3000, Degree(20) )
+  # g = Gears.GearANSI(Gears.Pitch(24), 189, Degree(20) ) # 100mm radius = 7.87in diameter = 188.8 teeth=> 189
+
+  nPerTooth = 50
+  nPerInvolute = convert(Int64,round(nPerTooth/2)) #this may be better defined by physical spacing...
+  Gears.InvoluteTooth.writeToothProfilePoints(g, nPerTooth=20)
+  (xs,ys) = Gears.InvoluteTooth.getToothProfilePoints(g, nPerTooth=20)
+  p = plot()
+  p = plot(p,xs, ys, linecolor=:blue, linestyle=:dash, linesize=1, markersize=3, markercolor=:red, aspect_ratio=:equal, linealpha=0.5)
+  display(p)
+end
+
 
 
 # @testset "InvoluteTooth" begin
@@ -60,61 +102,5 @@ end
 # end
 
 
-# @testset "InvoluteTooth calc" begin
-#   p = Gears.InvoluteTooth.plotTooth( r=96, gm=deg2rad(45), dl=deg2rad(56), ht=20 )
-#   # savefig("on220826_involutes_toothHeight.svg")
-#   display(p)
-#   @test true
-# end
+# 1989 hindhede lists properties of involutes that might be tested
 
-#1989 hindhede lists properties of involutes that might be tested
-
-@testset "gear info to involute shape" begin
-  @test true
-
-  # make an example for plotting and math
-  s = Gears.GearANSI( n=30, pitch=Diameter(Inch(1.250)), pressure=Degree(20) )
-  rod = convert(Float64,s.outside.value/2) # make a strip()?
-  rpd = convert(Float64,s.pitch.value/2)
-  rbd = convert(Float64,s.base.value/2)
-  rrd = convert(Float64,s.root.value/2)
-
-  p = plot()
-  p = Gears.InvoluteTooth.plotBaseSection( r=rod, gm=0, al=0, bt=π/4, thExtra=0.5, n=100, p=p, linecolor=:gray, linestyle=:dash)
-  p = Gears.InvoluteTooth.plotBaseSection( r=rpd, gm=0, al=0, bt=π/4, thExtra=0.5, n=100, p=p, linecolor=:black, linestyle=:dash)
-  p = Gears.InvoluteTooth.plotBaseSection( r=rbd, gm=0, al=0, bt=π/4, thExtra=0.5, n=100, p=p, linecolor=:gray, linestyle=:dash)
-  p = Gears.InvoluteTooth.plotBaseSection( r=rrd, gm=0, al=0, bt=π/4, thExtra=0.5, n=100, p=p, linecolor=:gray, linestyle=:dash)
-
-  i = 3
-  gm=2*π/s.nTeeth*(i-1)
-  # al = gm - (π/2/s.nTeeth + tan(s.pressure)-s.pressure)  ## need iterate
-  al = gm - (π/2/s.nTeeth + tan(convert(Radian,s.pressure).value)-convert(Radian,s.pressure).value )
-  ht = rod-rrd
-  althPdOd = Gears.InvoluteTooth.calcThetaHeight(r=rrd, gm=gm, al=al, ht=ht )
-  p = Gears.InvoluteTooth.plotInvolute( r=rrd, gm=gm, al=al, thMax=althPdOd, p=p, linecolor=:blue, linestyle=:solid)
-  p = Gears.InvoluteTooth.plotInvoluteConstruction( r=rrd, al=al, th=althPdOd, p=p, linecolor=:gray, linestyle=:dash)
-  # p = Gears.InvoluteTooth.drawAngleArc( p=p, r=rrd*.6, aMax=, aMin=al, label="γ", linecolor=:gray, linestyle=:solid, fontsize=10)
-  p = Gears.InvoluteTooth.plotGamma( p=p, gm=gm, r=rrd, ht=ht, linecolor=:green, linestyle=:solid )
-  p = Gears.InvoluteTooth.drawAngleArc( p=p, r=rrd*.4, aMax=gm, aMin=0, label="γ", linecolor=:gray, linestyle=:solid, fontsize=10)
-  p = Gears.InvoluteTooth.plotAlpha( p=p, r=rrd, al=al, linecolor=:gray, linestyle=:solid)
-  p = Gears.InvoluteTooth.drawAngleArc( p=p, r=rrd*.5, aMax=al, aMin=0, label="α", linecolor=:gray, linestyle=:solid, fontsize=10)
-
-  # bt = gm + (π/2/s.nTeeth + tan(s.pressure)-s.pressure)
-  bt = gm + (π/2/s.nTeeth + tan(convert(Radian,s.pressure).value)-convert(Radian,s.pressure).value )
-  btthPdOd = Gears.InvoluteTooth.calcThetaHeight(r=rrd, gm=gm, al=bt, ht=ht )
-  p = Gears.InvoluteTooth.plotInvolute( r=rrd, gm=gm, al=bt, thMax=btthPdOd, p=p, linecolor=:red, linestyle=:solid)
-
-  # for i in 1:s.nTeeth
-  #   gm=2*π/s.nTeeth*(i-1)
-  #   al = gm - (π/2/s.nTeeth + tan(s.pressure)-s.pressure) 
-  #   althPdOd = Gears.InvoluteTooth.calcThetaHeight(r=rrd, gm=gm, al=al, ht=ht )
-  #   p = Gears.InvoluteTooth.plotInvolute( r=rrd, gm=gm, al=al, thMax=althPdOd, p=p, linecolor=:blue, linestyle=:solid)
-
-  #   bt = gm + (π/2/s.nTeeth + tan(s.pressure)-s.pressure) 
-  #   btthPdOd = Gears.InvoluteTooth.calcThetaHeight(r=rrd, gm=gm, al=bt, ht=ht )
-  #   p = Gears.InvoluteTooth.plotInvolute( r=rrd, gm=gm, al=bt, thMax=btthPdOd, p=p, linecolor=:red, linestyle=:solid)
-  # end
-  display(p)
-  # # savefig("julia/Gears/on230630.svg")
-
-end;

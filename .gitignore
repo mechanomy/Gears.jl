@@ -5,6 +5,7 @@
 #python
 __pycache__
 *.py[cod]
+.CondaPkg
 
 #ipynb
 .ipynb_checkpoints
