@@ -206,6 +206,7 @@ module Gears
   abstract type AbstractGear end
 
   include("GearANSI.jl")
+  include("InvoluteTooth.jl")
 
 end #Gears
 
