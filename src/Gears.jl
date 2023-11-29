@@ -6,6 +6,7 @@ module Gears
 
   using UnitTypes
   using TestItems
+  using DocStringExtensions
 
   #inverse length not part of UnitTypes yet
   @makeBaseMeasure InverseLength PerMeter "m^-1"
@@ -68,20 +69,6 @@ module Gears
   PitchDiameter(dp::DiametralPitch, nTeeth::Int) = PitchDiameter( nTeeth / dp.measure )
   PitchDiameter(nTeeth::Int, dp::DiametralPitch) = PitchDiameter( nTeeth / dp.measure ) # positions shouldn't matter!
 
-  # Base.convert(::Type{DiametralPitch}, y::Pitch) = DiametralPitch(y.measure)
-  # Base.convert(::Type{Pitch}, y::DiametralPitch) = Pitch(y.measure)
-  # Base.:/(x::T, y::U) where {T<:Number, U<:AbstractDiameter} = Pitch( PerInch(x/convert(Inch,y).measure) )
-  # Base.:/(x::T, y::U) where {T<:Number, U<:AbstractRadius} = Pitch( PerInch(x/convert(Inch,convert(Diameter,y)).measure) )
-  # @testitem "Gear parameters in UnitTypes" begin
-  #   # display(names(Gears))
-  #   @test Pitch(PerInch(2)) ≈ 2.0
-  #   @test DiametralPitch(PerInch(2)) ≈ 2.0
-    
-  #   @test 1/Diameter(Inch(2)) ≈ DiametralPitch(PerInch(0.5))
-  #   @test 1/Diameter(Millimeter(50.8)) ≈ DiametralPitch(PerInch(0.5))
-  #   @test 1/Radius(Millimeter(25.4)) ≈ DiametralPitch(PerInch(0.5))
-  # end
-
   @makeDimension Addendum Inch
   """
   height of tooth above pitch circle
@@ -117,6 +104,8 @@ module Gears
     dp = DiametralPitch(nt, pd)
     ad = Addendum(dp)
     @test isapprox(od.measure, OutsideDiameter(pd, ad).measure, atol=1e-3)
+    @test isapprox(od - pd, Inch(1/3-1/4), atol=1e-3)
+    @test isapprox(OutsideDiameter(Inch(1))-BaseDiameter(Millimeter(25.4)), Meter(0), atol=1e-3 ) # just check that we still handle unit conversions correctly
   end
 
 
