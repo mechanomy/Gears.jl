@@ -22,10 +22,22 @@ module Dev
     ht = 0.5
     thExtra = 0.5
 
-    Gears.InvoluteTooth.plotTooth(axs=axs, bd=BaseDiameter(Centimeter(2)), gm=Radian(gm), dl=Radian(bt-al), ht=Millimeter(ht) )
+    # Gears.InvoluteTooth.plotTooth(axs=axs, bd=BaseDiameter(Centimeter(2)), gm=Radian(gm), dl=Radian(bt-al), ht=Millimeter(ht) )
+    Gears.InvoluteTooth.plotTooth(axs=axs, bd=g.base, gm=Radian(gm), dl=Radian(bt-al), ht=Millimeter(ht) )
     DataInspector(fig, transparency=true, backgroundcolor=RGBAf(1,1,1,0.5)) # https://docs.makie.org/stable/explanations/inspector/index.html
-
     display(GLMakie.Screen(), fig) # note the window only lasts as long as the julia session
   end
-  testToothPlotting()
+  # testToothPlotting()
+
+  function dev1129()
+    g = GearANSI( PitchDiameter(Inch(2.9167)), 70, Degree(20) ) #sdpsi_S1268Z-024A070
+    # (xs,ys) = Gears.InvoluteTooth.getToothProfilePoints(g, nPerTooth=20)
+
+    
+
+
+  end
+  dev1129()
+
 end
+;

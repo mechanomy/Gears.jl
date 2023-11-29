@@ -5,6 +5,7 @@ module InvoluteTooth # this submodule provides functions for drawing gear involu
 
   using Roots
   using LaTeXStrings
+  using Printf
   using UnitTypes
   using ..Gears
 
@@ -87,21 +88,22 @@ module InvoluteTooth # this submodule provides functions for drawing gear involu
     @test isapprox( Gears.InvoluteTooth.calcThetaHeight(bd=base, gm=Degree(56), al=Radian(1.27), toothHeight=(outside-base).measure/2 ), 0.69537, atol=1e-3)
   end
 
+  """
+    Returns (x,y) positions tracing the gear teeth for gear `g`. 
+    (x,y) is a vector of Measures which <:AbstractLength.
+
+  """
   function getToothProfilePoints(g::G where G<:Gears.AbstractGear; nPerTooth::Int=100)
     nPerInvolute = convert(Int64,round(nPerTooth/2)) #this may be better defined by physical spacing...
-
-    rod = convert(Float64, convert(Inch, g.outside/2))
-    rpd = convert(Float64, convert(Inch, g.pitch/2))
-    rrd = convert(Float64, convert(Inch, g.root/2))
-    rbd = convert(Float64, convert(Inch, g.base/2))
-    t = π/2/24
+    rpd = toBaseFloat(g.pitch.measure)/2
+    t = π/(2*g.nTeeth)  # calculating the tooth width t at the pitch diameter = pi/(2*Nteeth) cf Dooner61
   
-    xs = zeros(g.nTeeth*nPerInvolute*2+1)
-    ys = zeros(g.nTeeth*nPerInvolute*2+1)
+    xs = Meter.(zeros(g.nTeeth*nPerInvolute*2+1))
+    ys = Meter.(zeros(g.nTeeth*nPerInvolute*2+1))
     for i in 1:round(g.nTeeth)
       gm=Radian(2*π/g.nTeeth*(i)) #gamma is the angle of the line of the tooth center
 
-      psi = Radian(acos(rbd/rpd))
+      psi = Radian(acos(g.base.measure.value/g.pitch.measure.value))
       vpsi = Radian(tan(psi))-psi
 
       # tooth frontside
@@ -135,36 +137,145 @@ module InvoluteTooth # this submodule provides functions for drawing gear involu
     using UnitTypes
     g = GearANSI( PitchDiameter(Inch(2.9167)), 70, Degree(20) ) #sdpsi_S1268Z-024A070
     (xs,ys) = Gears.InvoluteTooth.getToothProfilePoints(g, nPerTooth=20)
-    @test isapprox( xs[1], 1.404033, atol=1e-3 ) # values from correct-looking plot
-    @test isapprox( xs[2], 1.411619, atol=1e-3 ) 
-    @test isapprox( xs[3], 1.419892, atol=1e-3 ) 
-    @test isapprox( last(xs), 1.404033, atol=1e-3 ) 
-    @test isapprox( ys[1], 0.079214, atol=1e-3 ) # values from correct-looking plot
-    @test isapprox( ys[2], 0.081518, atol=1e-3 ) 
-    @test isapprox( ys[3], 0.084247, atol=1e-3 ) 
-    @test isapprox( last(ys), 0.079214, atol=1e-3 ) 
+
+    # the plot looks correct, so hard-code a few values
+    # @show xs[1:3] last(xs)
+    # @show ys[1:3] last(ys)
+    @test isapprox( xs[1], Meter(0.03479), atol=1e-5 )
+    @test isapprox( xs[2], Meter(0.03509), atol=1e-5 ) 
+    @test isapprox( xs[3], Meter(0.03543), atol=1e-5 ) 
+    @test isapprox( last(xs), Meter(0.03479), atol=1e-5 ) 
+    @test isapprox( ys[1], Meter(-0.00811), atol=1e-3 )
+    @test isapprox( ys[2], Meter(-0.00810), atol=1e-3 ) 
+    @test isapprox( ys[3], Meter(-0.00808), atol=1e-3 ) 
+    @test isapprox( last(ys), Meter(-0.00811), atol=1e-3 ) 
   end
 
+  """
+  Writes a file of points tracing the outer edge of the gear teeth.
 
-  function writeToothProfilePoints(g::G where G<:Gears.AbstractGear; fileName::String="", fileExtension::String="txt", nPerTooth::Int=100)
+  $TYPEDSIGNATURES
+
+  * `g` the Gear to write
+  * `fileName` optional file name, if not provided will be named "gearProfilePoints_diametralPitch_nTeeth"*fileExtension
+  * `fileExtension` as below
+  * `nPerTooth` the number of points to write per tooth
+  * `unitType` the unit to save the points in from UnitTypes
+
+  The file format is given by the file extension in `fileName` or `fileExtension`.
+  Suported file types are:
+  * tsv==txt = tab-separated values
+  * csv = comma-separated values
+  * sldcrv = Solidworks Curve format having rows of Xin Yin Zin, where XYZ are the float positions and 'in' the linear unit. As the tooth profile is XY, Z = 0.
+
+  ```julia
+    using Gears
+    using UnitTypes
+    g = GearANSI( PitchDiameter(Inch(2.9167)), 70, Degree(20) )
+    Gears.InvoluteTooth.writeToothProfilePoints(g, fileName="gear70.csv", unitType=Centimeter)
+    Gears.InvoluteTooth.writeToothProfilePoints(g, fileName="gear70", fileExtension=".txt", unitType=Inch)
+  ```
+  """
+  function writeToothProfilePoints(g::Gears.AbstractGear; fileName::String="", fileExtension::String=splitext(fileName)[2], nPerTooth::Int=100, unitType::Type{T}=AbstractLength) where T<:AbstractLength
     (xs, ys) = getToothProfilePoints(g, nPerTooth=nPerTooth)
+
+    # determine the file format by the given extension
+    if fileName=="" 
+      if fileExtension==""
+        fileExtension = ".txt"
+      end
+      fileName = "gearProfilePoints_$(g.diametral)_$(g.nTeeth)"*fileExtension
+    end
+
+    if splitext(fileName)[2] == ""
+      fileName = fileName * fileExtension
+    end
 
     #now emit the points in the format expected by CAD
     zs = xs *0
 
-    if fileName == ""
-      fileName = "gearProfilePoints_$(g.diametral)_$(g.nTeeth).sldcrv"
+    # which unit to emit?
+    # ys = convert(typeof(xs[1]), ys)
+    if unitType == AbstractLength #default
+      xs = map(x -> convert(Millimeter,x), xs)
+      ys = map(x -> convert(Millimeter,x), ys)
+    else
+      xs = map(x -> convert(unitType,x), xs)
+      ys = map(x -> convert(unitType,x), ys)
     end
 
-    #solidworks format: 25mmTAB0mmTAB0mmCRLF
+    un = xs[1].unit
+
     open(fileName, "w") do f
-      for i in 1:length(xs)
-        # write(f, @sprintf("%3.3fmm\t%3.3fmm\t%3.3fmm", xs[i],ys[i],zs[i]))
-        # print("$(xs[i])mm\t$(ys[i])mm\t$(zs[i])mm\r\n")
-        # write(f, "$(xs[i])mm\t$(ys[i])mm\t$(zs[i])mm\r\n")
-        write(f, "$(xs[i])in\t$(ys[i])in\t$(zs[i])in\r\n")
+      if lowercase(fileExtension) == ".tsv" || lowercase(fileExtension) == ".txt"
+        write(f, Gears.gear2String(g)*"\n" )
+        write(f,"x[$un]\ty[$un]\n")
+        for i in eachindex(xs)
+          write(f, @sprintf("%3.3f\t%3.3f\n", xs[i].value, ys[i].value))
+        end
+
+      elseif lowercase(fileExtension) == ".csv"
+        write(f, Gears.gear2String(g)*"\n" )
+        write(f,"x[$un],y[$un]\n")
+        for i in eachindex(xs)
+          write(f, @sprintf("%3.3f,%3.3f\n", xs[i].value, ys[i].value))
+        end
+
+      elseif fileExtension == lowercase(".sldcrv")
+        for i in eachindex(xs)
+          #solidworks format: 25mmTAB0mmTAB0mmCRLF
+          write(f, "$(xs[i].value)$un\t$(ys[i].value)$un\t$(zs[i].value)$un\r\n") # inches, choose unit by?
+        end
+      else
+        throw(ArgumentError("File extension [$fileExtension] is not known to Gears.InvoluteTooth.writeToothProfilePoints()"))
       end
+    end #open
+  end
+  @testitem "writeToothProfilePoints to files" begin
+    # to test, check that the file exists and the first line after the header is correct
+    using UnitTypes
+    g = GearANSI( PitchDiameter(Inch(2.9167)), 70, Degree(20) ) #sdpsi_S1268Z-024A070
+
+    tDir = mktempdir()
+    println("Test folder is $tDir")
+
+    tPath = joinpath(tDir, "testProfilePoints.txt") 
+    Gears.InvoluteTooth.writeToothProfilePoints(g, fileName=tPath)
+    @test isfile(tPath)
+    open(tPath, "r") do fid
+      l1 = readline(fid)
+      l2 = readline(fid)
+      l3 = readline(fid)
+      @test l3 == "34.787\t-8.106" #as mm
     end
+
+    tPath = joinpath(tDir, "testProfilePoints.tsv") 
+    Gears.InvoluteTooth.writeToothProfilePoints(g, fileName=tPath, unitType=Centimeter)
+    @test isfile(tPath)
+    open(tPath, "r") do fid
+      l1 = readline(fid)
+      l2 = readline(fid)
+      l3 = readline(fid)
+      @test l3 == "3.479\t-0.811" #as cm
+    end
+
+    tPath = joinpath(tDir, "testProfilePoints.csv") 
+    Gears.InvoluteTooth.writeToothProfilePoints(g, fileName=tPath, fileExtension=".csv", unitType=Inch)
+    @test isfile(tPath)
+    open(tPath, "r") do fid
+      l1 = readline(fid)
+      l2 = readline(fid)
+      l3 = readline(fid)
+      @test l3 == "1.370,-0.319" # as inch
+    end
+
+    tPath = joinpath(tDir, "testProfilePoints.tsv") 
+    Gears.InvoluteTooth.writeToothProfilePoints(g, fileName=tPath, fileExtension=".sldcrv")
+    @test isfile(tPath)
+    open(tPath, "r") do fid
+      l1 = readline(fid)
+      @test l1 == "34.78722899491671mm\t-8.105983123125842mm\t0.0mm"
+    end   
   end
 
 
@@ -291,7 +402,7 @@ module InvoluteTooth # this submodule provides functions for drawing gear involu
   end
 
   """
-  plots both sides to form a tooth
+  Plots both sides to form a tooth
   r is the root diameter
   gamma is the center angle of the tooth
   delta is the angular width of the tooth at the root diameter
@@ -312,7 +423,7 @@ module InvoluteTooth # this submodule provides functions for drawing gear involu
     end
 
 
-    lines!(ax, [0,bd.measure.value/2*1.1],[0,0], color=:black) # draw figure axes
+    lines!(ax, [0,bd.measure.value/2*1.1],[0,0], color=:gray) # draw angle=0 line
     plotBaseSection(axs=ax, bd=bd, al=al, bt=bt, linecolor=:black, linestyle=:solid)
     plotGamma(axs=ax, bd=bd, gm=gm, ht=ht)
 
