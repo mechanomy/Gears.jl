@@ -8,19 +8,15 @@ module InvoluteTooth # this submodule provides functions for drawing gear involu
   using UnitTypes
   using ..Gears
 
-  rad2deg(rad) = rad*180/π
-
   """
   calculates the x coordinate of a point along the involute
   Note that the handedness of the involute is determined by th-al: if th-al>0 a right hand involute, th-al<0 is a left hand
   """
-  # ix(r,al,th) = r*( cos(th) + (th-al)*sin(th) )
   ix(bd::BaseDiameter, al::AbstractAngle, th::AbstractAngle) = (Radius(bd.measure/2)*( cos(th) + convert(Radian,th-al).value*sin(th) ) ).measure # returns an AbstractLength...
 
   """
   calculates the y coordinate of a point along the involute
   """
-  # iy(r,al,th) = r*( sin(th) - (th-al)*cos(th) )
   iy(bd::BaseDiameter, al::AbstractAngle, th::AbstractAngle) = (Radius(bd.measure/2)*( sin(th) - convert(Radian,th-al).value*cos(th) )).measure
   @testitem "involute calcs" begin
     using UnitTypes
@@ -35,13 +31,6 @@ module InvoluteTooth # this submodule provides functions for drawing gear involu
   Alpha is the angle of the involute's root on the base circle
   Theta0 is the guess of the angle corresponding to the intersection of the involute and gamma
   """
-  # function calcThetaIntersect(; gm, al, th0=gm+(gm-al)*2)
-  #   #calculate thMax to intersect with the gamma line
-  #   fxi(thc,al,gm) = cos(thc)^2 + 2*(thc-al)*cos(thc)*sin(thc) + (sin(thc)^2-cos(gm)^2)*(thc-al)^2 - cos(gm)^2
-  #   fyi(thc,al,gm) = sin(thc)^2 - 2*(thc-al)*cos(thc)*sin(thc) + (cos(thc)^2-sin(gm)^2)*(thc-al)^2 - sin(gm)^2
-  #   fxz(thc) = fxi(thc, al, gm)^2 + fyi(thc, al, gm)^2 
-  #   return find_zero(fxz, th0, atol=1e-5) 
-  # end
   function calcThetaIntersect(; gm::AbstractAngle, al::AbstractAngle, th0::AbstractAngle=gm+(gm-al)*2)
     #calculate thMax to intersect with the gamma line
     fxi(thc,al,gm) = cos(thc)^2 + 2*convert(Radian,thc-al).value*cos(thc)*sin(thc) + (sin(thc)^2-cos(gm)^2)*convert(Radian,thc-al).value^2 - cos(gm)^2
@@ -51,11 +40,6 @@ module InvoluteTooth # this submodule provides functions for drawing gear involu
   end
   @testitem "calcThetaIntersect" begin
     using UnitTypes
-    # fxi(thc,al,gm) = cos(thc)^2 + 2*convert(Radian,thc-al).value*cos(thc)*sin(thc) + (sin(thc)^2-cos(gm)^2)*convert(Radian,thc-al).value^2 - cos(gm)^2
-    # fyi(thc,al,gm) = sin(thc)^2 - 2*convert(Radian,thc-al).value*cos(thc)*sin(thc) + (cos(thc)^2-sin(gm)^2)*convert(Radian,thc-al).value^2 - sin(gm)^2
-    # @show fxi(Radian(1.2), Radian(1), Radian(2))
-    # @show fyi(Radian(1.2), Radian(1), Radian(2))
-    # @show Gears.InvoluteTooth.calcThetaIntersect(gm=Radian(2), al=Radian(1))
     @test isapprox( Gears.InvoluteTooth.calcThetaIntersect(gm=Radian(2), al=Radian(1)), 3.1327, atol=1e-3)
   end
 
@@ -69,10 +53,6 @@ module InvoluteTooth # this submodule provides functions for drawing gear involu
     `al0` - the angle of the involute at the outside diameter
     
   """
-  # function calcThetaRootIntersection(; rrd, rbd, alb, al0 )
-  #   fal(thc) = rrd - rbd*sqrt(1+(thc-alb)^2)
-  #   return find_zero(fal,al0, atol=1e-5) 
-  # end
   function calcThetaRootIntersection(; rd::RootDiameter, bd::BaseDiameter, alb::AbstractAngle, al0::AbstractAngle )
     fal(thc) = ( rd/2 - bd/2*sqrt(1+convert(Radian,thc-alb).value^2) ).measure.value #just keep the float
     return Radian(find_zero(fal, convert(Radian,al0).value, atol=1e-5))
@@ -104,7 +84,6 @@ module InvoluteTooth # this submodule provides functions for drawing gear involu
     @test isapprox( Gears.InvoluteTooth.calcThetaHeight(bd=BaseDiameter(Millimeter(192)), gm=Degree(56), al=Radian(1.27), toothHeight=Millimeter(20) ), 0.4910, atol=1e-3)
     base = BaseDiameter(Millimeter(192))
     outside = OutsideDiameter(Millimeter(200))
-    # @show (outside-base).measure/2
     @test isapprox( Gears.InvoluteTooth.calcThetaHeight(bd=base, gm=Degree(56), al=Radian(1.27), toothHeight=(outside-base).measure/2 ), 0.69537, atol=1e-3)
   end
 
@@ -130,8 +109,6 @@ module InvoluteTooth # this submodule provides functions for drawing gear involu
       alo = Gears.InvoluteTooth.calcThetaHeight(bd=g.base, gm=gm, al=alb, toothHeight=(g.outside-g.base).measure/2) # this is the angle of the involute tip at the outside diameter
       thalr = Gears.InvoluteTooth.calcThetaRootIntersection(rd=g.root, bd=g.base, alb=alb, al0=alb)
       ths = Radian.(LinRange(convert(Radian,thalr).value, convert(Radian,alo).value, nPerInvolute))
-      # xs[(i-1)*2*nPerInvolute .+ (1:nPerInvolute)] = Gears.InvoluteTooth.ix.(g.base, alb, ths)
-      # ys[(i-1)*2*nPerInvolute .+ (1:nPerInvolute)] = Gears.InvoluteTooth.iy.(rbd, alb, ths)
       for j = 1:nPerInvolute
         xs[(i-1)*2*nPerInvolute + j] = Gears.InvoluteTooth.ix(g.base, alb, ths[j])
         ys[(i-1)*2*nPerInvolute + j] = Gears.InvoluteTooth.iy(g.base, alb, ths[j])
@@ -141,10 +118,8 @@ module InvoluteTooth # this submodule provides functions for drawing gear involu
       btb = gm + asin(t/2/rpd) + vpsi
       bto = Gears.InvoluteTooth.calcThetaHeight(bd=g.base, gm=gm, al=btb, toothHeight=(g.outside-g.base).measure/2) 
       thbtr = Gears.InvoluteTooth.calcThetaRootIntersection(rd=g.root, bd=g.base, alb=btb, al0=bto)
-      # ths = LinRange(bto, thbtr, nPerInvolute)  # reverse direction
+
       ths = Radian.(LinRange(convert(Radian,bto).value, convert(Radian,thbtr).value, nPerInvolute))
-      # xs[(i-1)*2*nPerInvolute + nPerInvolute .+ (1:nPerInvolute)] = Gears.InvoluteTooth.ix.(rbd, btb, ths)
-      # ys[(i-1)*2*nPerInvolute + nPerInvolute .+ (1:nPerInvolute)] = Gears.InvoluteTooth.iy.(rbd, btb, ths)
       for j = 1:nPerInvolute
         xs[(i-1)*2*nPerInvolute + nPerInvolute + j] = Gears.InvoluteTooth.ix(g.base, btb, ths[j])
         ys[(i-1)*2*nPerInvolute + nPerInvolute + j] = Gears.InvoluteTooth.iy(g.base, btb, ths[j])
@@ -158,16 +133,8 @@ module InvoluteTooth # this submodule provides functions for drawing gear involu
   end
   @testitem "getToothProfilePoints" begin
     using UnitTypes
-    # using GLMakie
-    # GLMakie.closeall()
-    # GLMakie.activate!(decorated=true, focus_on_show=true) # https://docs.makie.org/stable/explanations/backends/glmakie/index.html#activation_and_screen_config
     g = GearANSI( PitchDiameter(Inch(2.9167)), 70, Degree(20) ) #sdpsi_S1268Z-024A070
     (xs,ys) = Gears.InvoluteTooth.getToothProfilePoints(g, nPerTooth=20)
-    # # fig = Figure()#backgroundcolor="#bbb", size=(1000,1000))
-    # # axs = Axis(fig[1,1])#, xlabel="X", ylabel="Y", aspect=:data)
-    # # l = lines!(axs, xs, ys, linewidth=3, label="g")
-    # # s = scatter!(axs, xs, ys, markersize=8)
-    # # display(GLMakie.Screen(), fig) # this may not stay open within the test..
     @test isapprox( xs[1], 1.404033, atol=1e-3 ) # values from correct-looking plot
     @test isapprox( xs[2], 1.411619, atol=1e-3 ) 
     @test isapprox( xs[3], 1.419892, atol=1e-3 ) 
@@ -205,7 +172,7 @@ module InvoluteTooth # this submodule provides functions for drawing gear involu
   Plots the base arc under the tooth
   """
   function plotBaseSection(; bd::BaseDiameter, al::AbstractAngle, bt::AbstractAngle, thExtra::AbstractAngle=Radian(0.5), n=100, axs=nothing, linecolor=:gray, linestyle=:solid)
-    if axs == nothing
+    if isnothing(axs)
       fig = Figure(backgroundcolor="#bbb", size=(1000,1000))
       ax = Axis(fig[1,1], xlabel="X", ylabel="Y", aspect=DataAspect())
     else
@@ -216,10 +183,9 @@ module InvoluteTooth # this submodule provides functions for drawing gear involu
     ths = LinRange(convert(Radian,al-thExtra).value, convert(Radian,bt+thExtra).value, n) 
     xs = bd.measure.value/2 .*cos.(ths)
     ys = bd.measure.value/2 .*sin.(ths)
-    # p = plot(p, xs, ys, linecolor=linecolor, linestyle=linestyle)
     l = lines!(ax, xs, ys, color=linecolor, linestyle=linestyle)
 
-    if axs == nothing
+    if isnothing(axs)
       display(GLMakie.Screen(), fig)
     end
     return l
@@ -229,7 +195,6 @@ module InvoluteTooth # this submodule provides functions for drawing gear involu
   Plots the line of symmetry gamma
   """
   function plotGamma(; axs, gm::AbstractAngle, bd::BaseDiameter, ht::AbstractLength, linecolor=:green, linestyle=:dash )
-    # p = plot(p, [0,(r+ht)*cos(gm)], [0,(r+ht)*sin(gm)], linecolor=linecolor, linestyle=linestyle)
     r = bd.measure.value/2 # take in the units given for now; on rewrite I should establish a unit for the graph and convert all
     l = lines!(axs, [0,(r+ht.value)*cos(gm)], [0,(r+ht.value)*sin(gm)], color=linecolor, linestyle=linestyle)
     return l
@@ -239,7 +204,6 @@ module InvoluteTooth # this submodule provides functions for drawing gear involu
   Plots the line to the base of the involute
   """
   function plotAlpha(; axs, bd::BaseDiameter, al::AbstractAngle, linecolor=:gray, linestyle=:dash)
-    # p = plot(p, [0,r*cos(al)], [0,r*sin(al)], linecolor=linecolor, linestyle=linestyle)
     r = bd.measure.value/2 # take in the units given for now; on rewrite I should establish a unit for the graph and convert all
     l = lines!(axs, [0,r*cos(al)], [0,r*sin(al)], color=linecolor, linestyle=linestyle)
     return l
@@ -249,7 +213,7 @@ module InvoluteTooth # this submodule provides functions for drawing gear involu
   Plots an involute of the circle
   """
   function plotInvolute(; bd::BaseDiameter, al::AbstractAngle, thMax::AbstractAngle, axs=nothing, linecolor=:blue, linestyle=:solid)
-    if axs == nothing
+    if isnothing(axs)
       fig = Figure(backgroundcolor="#bbb", size=(1000,1000))
       ax = Axis(fig[1,1], xlabel="X", ylabel="Y", aspect=DataAspect())
     else
@@ -266,7 +230,7 @@ module InvoluteTooth # this submodule provides functions for drawing gear involu
 
     l = lines!(ax,xs,ys, color=linecolor, linestyle=linestyle)
 
-    if axs == nothing
+    if isnothing(axs)
       display(GLMakie.Screen(), fig)
     end
 
@@ -276,7 +240,7 @@ module InvoluteTooth # this submodule provides functions for drawing gear involu
   """
   """
   function plotInvoluteConstruction(; bd::BaseDiameter, al::AbstractAngle, th::AbstractAngle, axs=nothing, linecolor=:gray, linestyle=:dash)
-    if axs == nothing
+    if isnothing(axs)
       fig = Figure(backgroundcolor="#bbb", size=(1000,1000))
       ax = Axis(fig[1,1], xlabel="X", ylabel="Y", aspect=DataAspect())
     else
@@ -288,7 +252,7 @@ module InvoluteTooth # this submodule provides functions for drawing gear involu
     ys = [0, r*sin(th), iy(bd,al,th).value]
     l = lines!(ax, xs,ys, color=linecolor, linestyle=linestyle)
 
-    if axs == nothing
+    if isnothing(axs)
       display(GLMakie.Screen(), fig)
     end
 
@@ -298,19 +262,12 @@ module InvoluteTooth # this submodule provides functions for drawing gear involu
   """
   """
   function drawAngleArc(; axs, r::AbstractLength, aMax::AbstractAngle, aMin::AbstractAngle=0, label="label", aLabel::AbstractAngle=aMax/2, linecolor=:gray, linestyle=:solid, fontsize=10)
-    # ths = LinRange(aMin, aMax, 100)
-    # xs = r .* cos.(ths)
-    # ys = r .* sin.(ths)
-    # p = plot(p, xs,ys, linecolor=linecolor, linestyle=linestyle, markerstyle=:rightarrow)
-
     ths = Radian.(LinRange(convert(Radian,aMin).value, convert(Radian,aMax).value, 100))
     xs = r.value .* cos.(ths)
     ys = r.value .* sin.(ths)
 
     s = scatterlines!(axs, xs, ys, color=linecolor, linestyle=linestyle, marker=:rtriangle)
 
-    # annotate!(r*cos(aLabel), r*sin(aLabel), "  "*label, annotationcolor=linecolor, annotationfontsize=fontsize, annotationrotation=rad2deg(aLabel) )
-    # annotate!(r*cos(aLabel), r*sin(aLabel), label, annotationcolor=linecolor, annotationfontsize=fontsize, annotationhalign=:left, annotationvalign=:bottom )
     text!(axs, r.value*cos(aLabel), r.value*sin(aLabel), text=label, color=linecolor, fontsize=fontsize, align=(:left,:bottom) )
     return s
   end
@@ -318,7 +275,7 @@ module InvoluteTooth # this submodule provides functions for drawing gear involu
   """
   """
   function drawToothTop(;bd::BaseDiameter, al::AbstractAngle, thal::AbstractAngle, bt::AbstractAngle, thbt::AbstractAngle, axs=nothing, linecolor=:orange, linestyle=:dash)
-    if axs == nothing
+    if isnothing(axs)
       fig = Figure(backgroundcolor="#bbb", size=(1000,1000))
       ax = Axis(fig[1,1], xlabel="X", ylabel="Y", aspect=DataAspect())
     else
@@ -327,7 +284,7 @@ module InvoluteTooth # this submodule provides functions for drawing gear involu
 
     l = lines!(ax, [ix(bd,al,thal).value, ix(bd,bt,thbt).value], [iy(bd,al,thal).value, iy(bd,bt,thbt).value], color=linecolor, linestyle=linestyle) # just two points = flat, though could assume it's circular at OutsideDiameter..
 
-    if axs == nothing
+    if isnothing(axs)
       display(GLMakie.Screen(), fig)
     end
     return l
@@ -345,13 +302,11 @@ module InvoluteTooth # this submodule provides functions for drawing gear involu
     al = gm - dl/2
     althMax = calcThetaHeight(bd=bd, gm=gm, al=al, toothHeight=ht)
     bt = gm + dl/2
-    @show bt typeof(bt)
     btthMax = calcThetaHeight(bd=bd, gm=gm, al=bt, toothHeight=ht)
 
-    if axs == nothing
+    if isnothing(axs)
       fig = Figure(backgroundcolor="#bbb", size=(1000,1000))
-      ax = Axis(fig[1,1], xlabel="X", ylabel="Y", aspect=DataAspect())
-      # p = plot(legend=false, title="Involute tooth with γ=$(round(rad2deg(gm))), δ=$(round(rad2deg(dl)))")
+      ax = Axis(fig[1,1], xlabel="X", ylabel="Y", aspect=DataAspect(), title="Involute tooth with γ=$(Degree(gm).value), δ=$(Degree(dl).value)")
     else
       ax = axs
     end

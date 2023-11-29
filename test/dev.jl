@@ -22,18 +22,10 @@ module Dev
     ht = 0.5
     thExtra = 0.5
 
-    # Gears.InvoluteTooth.plotBaseSection(axs=axs, r=r, al=al, bt=bt)
-    # Gears.InvoluteTooth.plotGamma(axs=axs, gm=gm, r=r, ht=0.5 )
-    # Gears.InvoluteTooth.plotAlpha(axs=axs, r=r, al=al)
-    # Gears.InvoluteTooth.plotInvolute(axs=axs, r=r, al=al, thMax=0.2)
-    # Gears.InvoluteTooth.plotInvoluteConstruction(axs=axs, r=r, al=al, th=1.2)
-    # Gears.InvoluteTooth.drawAngleArc(axs=axs, r=r, aMax=1.5, aMin=al)
-    # Gears.InvoluteTooth.drawToothTop(axs=axs, r=r, al=al, thal=0.2, bt=bt, thbt=0.2)
-
     Gears.InvoluteTooth.plotTooth(axs=axs, bd=BaseDiameter(Centimeter(2)), gm=Radian(gm), dl=Radian(bt-al), ht=Millimeter(ht) )
+    DataInspector(fig, transparency=true, backgroundcolor=RGBAf(1,1,1,0.5)) # https://docs.makie.org/stable/explanations/inspector/index.html
 
     display(GLMakie.Screen(), fig) # note the window only lasts as long as the julia session
-    # display(fig)
   end
   testToothPlotting()
 end
