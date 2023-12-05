@@ -7,10 +7,16 @@ This package models Gears generally, including:
 
 As these encompass a lot of terrain, the aim is not to be comprehensive but immediately useful, supporting quick prototyping of gears especially through 3D printing.
 
+## Basic example
 
 
 
-GearTransmissions.jl uses this package to model gear trains in various configurations.
+
+
+<!-- GearTransmissions.jl uses this package to model gear trains in various configurations. -->
+
+
+
 
 
 ## References

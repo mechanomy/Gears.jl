@@ -8,6 +8,12 @@ module Gears
   using TestItems
   using DocStringExtensions
 
+  @template DEFAULT =
+      """
+      $(TYPEDSIGNATURES)
+      $(DOCSTRING)
+      """
+
   #inverse length not part of UnitTypes yet
   @makeBaseMeasure InverseLength PerMeter "m^-1"
   @makeDerivedMeasure PerInch "in^-1" 1/0.0254 PerMeter # 39.3700 in/meter
@@ -27,7 +33,7 @@ module Gears
 
   # Gear-specific types:
   """
-  the diameter of the pitch circle
+  The diameter of the pitch circle which, when engaged with another gear has the same angular velocity as that other gear's pitch circle
   """
   #not documentable
   @makeDimension PitchDiameter Inch # diameter of the pitch circle
@@ -193,9 +199,30 @@ module Gears
 
 
   abstract type AbstractGear end
+  export AbstractGear
 
   include("GearANSI.jl")
   include("InvoluteTooth.jl")
+
+
+
+
+  # function dev1130()
+  #   g = GearANSI( PitchDiameter(Inch(1.2500)), 30, Degree(20) ) # sdpsi_s10c9z-024h030
+
+  #   (xs,ys) = Gears.InvoluteTooth.getToothProfilePoints(g)
+  #   # fig = Figure(backgroundcolor="#bbb", size=(1000,1000))
+  #   # axs = Axis(fig[1,1], xlabel="X", ylabel="Y", aspect=DataAspect())
+
+  #   # scatterlines!(axs, toBaseFloat.(xs), toBaseFloat.(ys), linewidth=1)
+
+  #   # DataInspector(fig, transparency=true, backgroundcolor=RGBAf(1,1,1,0.5)) # https://docs.makie.org/stable/explanations/inspector/index.html
+  #   # display(GLMakie.Screen(), fig) # note the window only lasts as long as the julia session
+  # end
+  # dev1130()
+
+
+
 
 end #Gears
 

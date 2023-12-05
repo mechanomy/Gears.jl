@@ -78,12 +78,12 @@ function gear2String(g::GearANSI)::String
   #   convert(Float64, g.pitchDiameter.value),
   #   convert(Float64, g.diametralPitch.value)
   # )
-  return "GearANSI: $(g.nTeeth)tooth $(g.pitch) $(g.diametral)"
+  return "GearANSI: $(g.nTeeth)tooth $(g.pitch)"
 end
 @testitem "gear2String" begin
   using UnitTypes
   g = GearANSI(PitchDiameter(Inch(1.2500)), 30, Degree(20))
-  @test Gears.gear2String(g) === "GearANSI: 30tooth Gears.PitchDiameter(1.25in) Gears.DiametralPitch(24.0in^-1)"
+  @test Gears.gear2String(g) === "GearANSI: 30tooth Gears.PitchDiameter(1.25in)"
 end
 
 """
