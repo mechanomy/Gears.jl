@@ -8,11 +8,13 @@ module Gears
   using TestItems
   using DocStringExtensions
 
-  @template DEFAULT =
+  @template DEFAULT = """
+    $TYPEDSIGNATURES
+
+    $DOCSTRING
     """
-    $(TYPEDSIGNATURES)
-    $(DOCSTRING)
-    """
+
+
 
   #inverse length not part of UnitTypes yet
   @makeBaseMeasure InverseLength PerMeter "m^-1"
@@ -20,12 +22,6 @@ module Gears
   # @deriveMeasure PerMeter(1/0.0254) = PerInch(1) "in^-1"
   Base.:/(x::T, y::U) where {T<:Number, U<:AbstractLength} = PerInch(x / convert(Inch, y).value )
   Base.:/(x::T, y::U) where {T<:Number, U<:AbstractInverseLength} = Inch(x / convert(PerInch, y).value )
-
-  # # UnitTypes should supply these:
-  # Base.:*(x::T, y::U) where {T<:AbstractRadius, U<:Number} = T(x.measure * y)
-  # Base.:*(x::T, y::U) where {T<:AbstractDiameter, U<:Number} = T(x.measure * y)
-  # Base.:*(x::T, y::U) where {T<:Number, U<:AbstractRadius} = U(x.measure * y)
-  # Base.:*(x::T, y::U) where {T<:Number, U<:AbstractDiameter} = U(x.measure * y)
 
   # Base.:*(x::T, y::U) where {T<:AbstractLength, U<:AbstractInverseLength} = x.value*x.toBase * y.value*y.toBase #is this needed?
   @testitem "PerInch" begin
@@ -55,19 +51,20 @@ module Gears
     # @test isapprox(PitchDiameter(nt, dp))
   end
 
+  @makeDimension PitchRadius Inch
+  # @relateDimensions PitchDiameter = 2*PitchRadius
+  # @testitem "PitchRadius" begin
+  #   using UnitTypes
+  #   pd = PitchDiameter(Inch(3.4))
+  #   @show pd
+  #   @show PitchRadius(pd)
+  # end
+
   @makeDimension DiametralPitch PerInch # = Nteeth/PitchDiameter, the number of teeth per inch of pitch diameter, larger DP is smaller teeth; dp is not a pitch in the same sense as basePitch
   DiametralPitch(nTeeth::Int, pd::PitchDiameter) = DiametralPitch( nTeeth / convert(Inch, pd.measure)) # macro defines DiametralPitch{PerInch}(num), but this is the actual definition
-  # instead of using the macro, define by hand so that I can have a custom constructor
-  # abstract type AbstractDiametralPitch <: AbstractDimension end
-  """
-    the number of teeth per inch of pitch diameter, larger DP is smaller teeth; dp is not a pitch in the same sense as basePitch
-  """
-  # struct DiametralPitch{T<:AbstractInverseLength} <: AbstractDiametralPitch
-  #   measure::T
-  #   DiametralPitch(nTeeth::T, pd::U) where {T<:Int, U<:PitchDiameter} = new{PerInch}( nTeeth / convert(Inch,pd.measure) )
-  # end
-  # export DiametralPitch
-  # Base.:/(x::T, y::U) where {T<:Number, U<:AbstractDiametralPitch} = PitchDiameter(x / y.measure) # not true as it does not know nTeeth
+  # """
+  #   the number of teeth per inch of pitch diameter, larger DP is smaller teeth; dp is not a pitch in the same sense as basePitch
+  # """
   @testitem "DiametralPitch" begin
     using UnitTypes
     dp = DiametralPitch(30, PitchDiameter(Inch(1.250)) )
@@ -113,6 +110,7 @@ module Gears
     Outside diameter is the maximum diameter of the gear teeth
   """
   OutsideDiameter(pd::PitchDiameter, ad::Addendum) = OutsideDiameter( (pd + 2*ad) ) # () is a PitchDiameter, so we need to get the Inch measure
+  Base.:-(x::OutsideDiameter, y::PitchDiameter) = x.measure-y.measure
 
   @testitem "OutsideDiameter" begin
     using UnitTypes
@@ -134,6 +132,8 @@ module Gears
   """
   BaseDiameter(pd::PitchDiameter, pressureAngle::U where U<: AbstractAngle) = BaseDiameter( pd.measure * cos(pressureAngle))
   # UnitTypes.Radius(bd::BaseDiameter) = Radius(bd.measure)
+  Base.:-(x::OutsideDiameter, y::BaseDiameter) = x.measure-y.measure
+
   @testitem "BaseDiameter" begin
     using UnitTypes
     pd = PitchDiameter(Inch(1.2500))
@@ -172,18 +172,11 @@ module Gears
   end
 
 
-  # """
-  # distance between successive involutes measured along the segment of the base circle, mating teeth must have the same base pitch length
-  # """
-  # # basePitch(nTeeth::Int, baseDiameter::Diameter) = π*baseDiameter/nTeeth # length/tooth
-  # baseInterval(nTeeth::Int, baseDiameter::Diameter) = π*convert(typeof(baseDiameter).parameters[1],baseDiameter)/nTeeth # length/tooth
-  
-
   @makeDimension CircularPitch Inch
   """
     the arc distance between similar points on the adjacent teeth in linear units along the arc segment
   """
-  CircularPitch(pd::PitchDiameter, nTeeth) = π*pd / nTeeth
+  CircularPitch(pd::PitchDiameter, nTeeth) = CircularPitch(Inch(π*pd.measure.value / nTeeth))
   # circularPitch(diametralPitch) = π/diametralPitch
   @testitem "CircularPitch" begin
     using UnitTypes
@@ -213,26 +206,6 @@ module Gears
 
   include("GearANSI.jl")
   include("InvoluteTooth.jl")
-
-
-
-
-  # function dev1130()
-  #   g = GearANSI( PitchDiameter(Inch(1.2500)), 30, Degree(20) ) # sdpsi_s10c9z-024h030
-
-  #   (xs,ys) = Gears.InvoluteTooth.getToothProfilePoints(g)
-  #   # fig = Figure(backgroundcolor="#bbb", size=(1000,1000))
-  #   # axs = Axis(fig[1,1], xlabel="X", ylabel="Y", aspect=DataAspect())
-
-  #   # scatterlines!(axs, toBaseFloat.(xs), toBaseFloat.(ys), linewidth=1)
-
-  #   # DataInspector(fig, transparency=true, backgroundcolor=RGBAf(1,1,1,0.5)) # https://docs.makie.org/stable/explanations/inspector/index.html
-  #   # display(GLMakie.Screen(), fig) # note the window only lasts as long as the julia session
-  # end
-  # dev1130()
-
-
-
 
 end #Gears
 

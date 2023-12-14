@@ -7,7 +7,6 @@ module Dev
   GLMakie.closeall()
   GLMakie.activate!(decorated=true, focus_on_show=true) # https://docs.makie.org/stable/explanations/backends/glmakie/index.html#activation_and_screen_config
 
-
   function testToothPlotting()
     g = GearANSI( PitchDiameter(Inch(2.9167)), 70, Degree(20) ) #sdpsi_S1268Z-024A070
     # (xs,ys) = Gears.InvoluteTooth.getToothProfilePoints(g, nPerTooth=20)
@@ -79,7 +78,31 @@ module Dev
     display(GLMakie.Screen(), fig) # note the window only lasts as long as the julia session
 
   end
-  devInvoluteXYs()
+  # devInvoluteXYs()
+
+
+  Base.:/(x::Diameter, y::Real) = x.measure/y
+  Base.:-(x::Diameter, y::Diameter) = x.measure-y.measure # doing math destroys the Diameter context
+  function devAliasDiameter()
+    # can I create aliases to Dimensions.Diameter and .Radius?
+    OutDim = UnitTypes.Diameter
+    PitchDim = UnitTypes.Diameter
+    RootDim = UnitTypes.Diameter
+    BaseDim = UnitTypes.Diameter
+
+    # @makeDimension PitchDiameter Inch # diameter of the pitch circle
+
+    pd = PitchDim(Inch(3.4)) # this isn't a type...but it works great
+    @show pd pd/2 Radius(pd)
+    od = OutDim(Inch(3.5))
+    @show od
+    @show od - pd
+
+
+  end
+  devAliasDiameter()
+  
+
 
 end
 ;
