@@ -13,22 +13,17 @@ module InvoluteTooth # this submodule provides functions for drawing gear involu
   # An involute begins at a point on the base circle at circular angle alpha.
   # It is parameterized by angle theta (>alpha) above the base radius.
   # Angle theta is geometrically interpreted as the point on the base circle whose tangent line is also perpendicular to the involute, as shown in plotInvoluteConstruction.
-  # struct Involute
-  #   base::BaseDiameter
-  #   alpha::AbstractAngle
-  # end
-
 
   """
     Calculates the x coordinate of a point along the involute
     Note that the handedness of the involute is determined by th-al: if th-al>0 a right hand involute, th-al<0 is a left hand
   """
-  ix(bd::BaseDiameter, al::AbstractAngle, th::AbstractAngle) = (Radius(bd.measure/2)*( cos(th) + convert(Radian,th-al).value*sin(th) ) ).measure # returns an AbstractLength...
+  ix(bd::BaseDiameter, al::AbstractAngle, th::AbstractAngle) = (bd.measure/2*( cos(th) + convert(Radian,th-al).value*sin(th) ) )# returns an AbstractLength...
 
   """
     Calculates the y coordinate of a point along the involute
   """
-  iy(bd::BaseDiameter, al::AbstractAngle, th::AbstractAngle) = (Radius(bd.measure/2)*( sin(th) - convert(Radian,th-al).value*cos(th) )).measure
+  iy(bd::BaseDiameter, al::AbstractAngle, th::AbstractAngle) = (bd.measure/2*( sin(th) - convert(Radian,th-al).value*cos(th) ))
   @testitem "involute calcs" begin
     using UnitTypes
     @test Gears.InvoluteTooth.ix(BaseDiameter(Meter(2)), Radian(1), Radian(2)) ≈ Meter( 1*(cos(2) + (2-1)*sin(2)) ) #check type correctness
@@ -36,7 +31,7 @@ module InvoluteTooth # this submodule provides functions for drawing gear involu
   end
 
   """
-  Gamma is the angle of the line of symmetry of `iTooth` for a complete gear with `nTeeth`
+    Gamma is the angle of the line of symmetry of `iTooth` for a complete gear with `nTeeth`
   """
   gamma(nTeeth::Int, iTooth::Int) = Radian(2*π/nTeeth*iTooth) #gamma is the angle of the line of the tooth center
 
@@ -44,7 +39,7 @@ module InvoluteTooth # this submodule provides functions for drawing gear involu
     Calculates the angular tooth width at the pitch diameter = pi/(2*Nteeth).
     See Dooner#61.
   """
-  toothAngleAtPitchDiameter(g::AbstractGear) = Radian(π/2/g.nTeeth)
+  toothAngularWidthAtPitchDiameter(g::AbstractGear) = Radian(π/2/g.nTeeth)
 
   """
     Finds the angle when the involute has risen `toothHeight` above `r`
@@ -89,7 +84,7 @@ module InvoluteTooth # this submodule provides functions for drawing gear involu
       vpsi = Radian(tan(psi))-psi
 
       # tooth frontside
-      alPitch = gm - toothAngleAtPitchDiameter(g) #cf fig2.4 2012Dooner
+      alPitch = gm - toothAngularWidthAtPitchDiameter(g) #cf fig2.4 2012Dooner
       alBase = alPitch - vpsi 
       thOutside = findInvoluteAngleAtRadius(bd=g.base, gm=gm, al=alBase, rDesired=g.outside.measure/2) # this is the angle of the involute tip at the outside diameter
       thRoot = findInvoluteAngleAtRadius(bd=g.base, gm=gm, al=alBase, rDesired=g.root.measure/2)
@@ -100,7 +95,7 @@ module InvoluteTooth # this submodule provides functions for drawing gear involu
       end
 
       # tooth backside
-      btPitch = gm + toothAngleAtPitchDiameter(g) #cf fig2.4 2012Dooner
+      btPitch = gm + toothAngularWidthAtPitchDiameter(g) #cf fig2.4 2012Dooner
       btBase = btPitch + vpsi 
       thOutside = findInvoluteAngleAtRadius(bd=g.base, gm=gm, al=btBase, rDesired=g.outside.measure/2) # this is the angle of the involute tip at the outside diameter
       thRoot = findInvoluteAngleAtRadius(bd=g.base, gm=gm, al=btBase, rDesired=g.root.measure/2)
@@ -155,7 +150,7 @@ module InvoluteTooth # this submodule provides functions for drawing gear involu
       using Gears
       using UnitTypes
       g = GearANSI( PitchDiameter(Inch(2.9167)), 70, Degree(20) )
-      Gears.InvoluteTooth.writeToothProfilePoints(g, fileName="gear70.csv", unitType=Centimeter)
+      Gears.InvoluteTooth.writeToothProfilePoints(g, fileName="gear70.csv", unitType=CentiMeter)
       Gears.InvoluteTooth.writeToothProfilePoints(g, fileName="gear70", fileExtension=".txt", unitType=Inch)
     ```
   """
@@ -180,8 +175,8 @@ module InvoluteTooth # this submodule provides functions for drawing gear involu
     # which unit to emit?
     # ys = convert(typeof(xs[1]), ys)
     if unitType == AbstractLength #default
-      xs = map(x -> convert(Millimeter,x), xs)
-      ys = map(x -> convert(Millimeter,x), ys)
+      xs = map(x -> convert(MilliMeter,x), xs)
+      ys = map(x -> convert(MilliMeter,x), ys)
     else
       xs = map(x -> convert(unitType,x), xs)
       ys = map(x -> convert(unitType,x), ys)
@@ -233,7 +228,7 @@ module InvoluteTooth # this submodule provides functions for drawing gear involu
     end
 
     tPath = joinpath(tDir, "testProfilePoints.tsv") 
-    Gears.InvoluteTooth.writeToothProfilePoints(g, fileName=tPath, unitType=Centimeter)
+    Gears.InvoluteTooth.writeToothProfilePoints(g, fileName=tPath, unitType=CentiMeter)
     @test isfile(tPath)
     open(tPath, "r") do fid
       l1 = readline(fid)
@@ -376,7 +371,7 @@ module InvoluteTooth # this submodule provides functions for drawing gear involu
     psi = Radian(acos(toBaseFloat(g.base.measure)/toBaseFloat(g.pitch.measure)))
     vpsi = Radian(tan(psi))-psi
 
-    alPitch = gm - toothAngleAtPitchDiameter(g) #cf fig2.4 2012Dooner
+    alPitch = gm - toothAngularWidthAtPitchDiameter(g) #cf fig2.4 2012Dooner
     alBase = alPitch - vpsi 
     thPitch = alPitch + psi 
     thOutside = findInvoluteAngleAtRadius(bd=g.base, gm=gm, al=alBase, rDesired=g.outside.measure/2) # this is the angle of the involute tip at the outside diameter
@@ -394,7 +389,7 @@ module InvoluteTooth # this submodule provides functions for drawing gear involu
 
     ###############################################################################################
     #now plot the other side of the tooth
-    btPitch = gm + toothAngleAtPitchDiameter(g)
+    btPitch = gm + toothAngularWidthAtPitchDiameter(g)
     btBase = btPitch + vpsi
     thOutside = findInvoluteAngleAtRadius(bd=g.base, gm=gm, al=btBase, rDesired=g.outside.measure/2) # this is the angle of the involute tip at the outside diameter
 
