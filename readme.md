@@ -1,16 +1,13 @@
 # Gears.jl
 This package models Gears generally, including:
 * functions for calculating involute tooth profiles
-* working with gear parameters and equations
+* working with gear parameters and handbook equations
 * gear standards
-* plotting
+* plotting and other geometric outputs
 
 As these encompass a lot of terrain, the aim is not to be comprehensive but immediately useful, supporting quick prototyping of gears especially through 3D printing.
 
 ## Basic example
-
-
-
 
 
 <!-- GearTransmissions.jl uses this package to model gear trains in various configurations. -->

@@ -1,7 +1,8 @@
-
+# struct and functions for working with ANSI-spec sprug gears.
+# As the full specification is not available, included here are the most basic and common parameters and calculations.
 
 """
-Struct to represent ANSI-specification spur gears
+  Struct to represent ANSI-specification spur gears.
 """
 struct GearANSI <: AbstractGear
   nTeeth::Int
@@ -21,6 +22,7 @@ struct GearANSI <: AbstractGear
   # workingDepth::UnitTypes.AbstractLength
   # clearance::UnitTypes.AbstractLength
 end
+
 function GearANSI(dp::DiametralPitch, nTeeth::Int, pa::UnitTypes.Degree=UnitTypes.Degree(20)) 
   pd = PitchDiameter(dp, nTeeth)
   bd = BaseDiameter(pd,pa)
@@ -30,6 +32,7 @@ function GearANSI(dp::DiametralPitch, nTeeth::Int, pa::UnitTypes.Degree=UnitType
   rd = RootDiameter(pd, dd)
   return GearANSI( nTeeth, pd, pa, dp, ad, dd, od, bd, rd)
 end
+
 function GearANSI(pd::PitchDiameter, nTeeth::Int, pa::UnitTypes.Degree=UnitTypes.Degree(20)) 
   dp = DiametralPitch(nTeeth, pd)
   bd = BaseDiameter(pd,pa)
@@ -83,12 +86,12 @@ end
 @testitem "gear2String" begin
   using UnitTypes
   g = GearANSI(PitchDiameter(Inch(1.2500)), 30, Degree(20))
-  @test Gears.gear2String(g) === "GearANSI: 30tooth Gears.PitchDiameter(1.25in)"
+  # @test Gears.gear2String(g) === "GearANSI: 30tooth Gears.PitchDiameter(1.25in)"
+  @test Gears.gear2String(g) === "GearANSI: 30tooth Gears.GearDimensions.PitchDiameter(1.25in)"
 end
 
 """
-    Base.show(io::IO, p::AbstractPulley)
-  Function to `show()` a AbstractPulley via [`pulley2String`](#BeltTransmission.pulley2String).
+  Function to `show()` a GearANSI via [`gear2String()`](@ref)
 """
 function Base.show(io::IO, g::GearANSI)
   print(io, gear2String(g))

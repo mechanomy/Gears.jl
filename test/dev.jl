@@ -80,9 +80,11 @@ module Dev
   end
   # devInvoluteXYs()
 
+  struct PitDiam{T<:AbstractLength} <: AbstractDiameter
+    measure::T
+  end
 
-  Base.:/(x::Diameter, y::Real) = x.measure/y
-  Base.:-(x::Diameter, y::Diameter) = x.measure-y.measure # doing math destroys the Diameter context
+  Rad(d::AbstractDiameter) = Radius(d.measure/2)
   function devAliasDiameter()
     # can I create aliases to Dimensions.Diameter and .Radius?
     OutDim = UnitTypes.Diameter
@@ -91,18 +93,26 @@ module Dev
     BaseDim = UnitTypes.Diameter
 
     # @makeDimension PitchDiameter Inch # diameter of the pitch circle
-
     pd = PitchDim(Inch(3.4)) # this isn't a type...but it works great
-    @show pd pd/2 Radius(pd)
-    od = OutDim(Inch(3.5))
-    @show od
-    @show od - pd
+    # @show pd pd/2 Radius(pd)
+    # od = OutDim(Inch(3.5))
+    # @show od
+    # @show od - pd
 
+    #but I really like type-guarded functions...
+    #DiametralPitch(nTeeth::Int, pd::PitchDiameter) = DiametralPitch( nTeeth / convert(Inch, pd.measure)) 
 
+    pd = PitDiam(Inch(3.4))
+    @show pd typeof(pd) typeof(pd)<:AbstractDiameter
+    @show pd/2 
+    @show pd+Inch(3)
+    # @show Radius(pd) # radius is written wrong, Radius(d::Diameter)
+    @show Rad(pd) # but if corrected it would work, returning a UT.Radius object and stripping the 'pitch' aspect
+
+    #...though this only shifts the burden from the function args to one step prior.
+    #to be blunt, I don't have the time to keep incrementing unittypes
   end
   devAliasDiameter()
   
-
-
 end
 ;

@@ -2,7 +2,7 @@
 
 julia_version = "1.9.2"
 manifest_format = "2.0"
-project_hash = "13bc4a8823693d2a91c50636072f4cbd6ed6ab9d"
+project_hash = "4598267e3328d8c7bbf3fc46a3aabc5ab841837c"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -1379,12 +1379,13 @@ version = "0.1.1"
 
 [[deps.StaticArrays]]
 deps = ["LinearAlgebra", "PrecompileTools", "Random", "StaticArraysCore"]
-git-tree-sha1 = "5ef59aea6f18c25168842bded46b16662141ab87"
+git-tree-sha1 = "2aded4182a14b19e9b62b063c0ab561809b5af2c"
 uuid = "90137ffa-7385-5640-81b9-e52037218182"
-version = "1.7.0"
-weakdeps = ["Statistics"]
+version = "1.8.0"
+weakdeps = ["ChainRulesCore", "Statistics"]
 
     [deps.StaticArrays.extensions]
+    StaticArraysChainRulesCoreExt = "ChainRulesCore"
     StaticArraysStatisticsExt = "Statistics"
 
 [[deps.StaticArraysCore]]
@@ -1532,7 +1533,7 @@ version = "0.4.1"
 
 [[deps.UnitTypes]]
 deps = ["Compat", "DocStringExtensions", "Reexport", "Test", "TestItemRunner", "TestItems"]
-git-tree-sha1 = "fbde79cb46e8c1fa1a539105cb7406266402ac1c"
+git-tree-sha1 = "73e80374e701d1ba9ae0bc28e21d928eda3e0efd"
 repo-rev = "main"
 repo-url = "W:\\sync\\mechgits\\julia\\UnitTypes_public"
 uuid = "b0895f2b-ad30-48b9-9e38-efbd1231cd91"
