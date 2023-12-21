@@ -9,12 +9,6 @@ module Gears
   using DocStringExtensions
   using Reexport
 
-  @template DEFAULT = """
-    $TYPEDSIGNATURES
-
-    $DOCSTRING
-    """
-
   abstract type AbstractGear end
   export AbstractGear
 

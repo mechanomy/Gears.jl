@@ -1,4 +1,3 @@
-
 module GearDimensions
 
   #references:
@@ -6,30 +5,23 @@ module GearDimensions
   # https://khkgears.net/new/gear_knowledge/gear_technical_reference/calculation_gear_dimensions.html
 
 
-
-
   using TestItems
   using UnitTypes
+
   @makeDimension PitchDiameter Inch # diameter of the pitch circle
 
   @testitem "PitchDiameter" begin
     using UnitTypes
     @test isapprox(PitchDiameter(MilliMeter(86.36)), PitchDiameter(Inch(3.4)), atol=1e-3 )
-
-    nt = 10
-    pd = PitchDiameter(Inch(3.4))
-    dp = DiametralPitch(nt,pd)
-    pd2 = PitchDiameter(nt, dp)
-    @test isapprox(pd, pd2, atol=1e-3)
-    # @test isapprox(PitchDiameter(nt, dp))
   end
-
 
   @makeBaseMeasure InverseLength PerMeter "m^-1"  #inverse length not part of UnitTypes yet
   # @makeDerivedMeasure PerInch "in^-1" 1/0.0254 PerMeter # 39.3700 in/meter
   @deriveMeasure PerMeter(1/0.0254) = PerInch(1) "in^-1"
   Base.:/(x::T, y::U) where {T<:Real, U<:AbstractLength} = PerInch(x / convert(Inch, y).value )
   Base.:/(x::T, y::U) where {T<:Real, U<:AbstractInverseLength} = Inch(x / convert(PerInch, y).value )
+
+  Base.round(x::T, r::RoundingMode=RoundNearest; digits::Integer=0, base=10) where T<:AbstractMeasure = T( round(x.value, r, digits=digits, base=base) )
   @testitem "PerInch" begin
     using UnitTypes
     @test PerMeter(2).value ≈ 2
@@ -40,14 +32,20 @@ module GearDimensions
     # @test Inch(3) * PerInch(3) ≈ 1 # 3/inch*3inch 
   end
 
+  # Since DiametralPitch is the number of teeth in an inch, it is defined to be an integer
   @makeDimension DiametralPitch PerInch # = Nteeth/PitchDiameter, the number of teeth per inch of pitch diameter, larger DP is smaller teeth; dp is not a pitch in the same sense as basePitch
   """
-    the number of teeth per inch of pitch diameter, larger DP is smaller teeth; dp is not a pitch in the same sense as basePitch
+    $TYPEDSIGNATURES
+
+    The number of teeth per inch of pitch diameter, larger DP is smaller teeth; dp is not a pitch in the same sense as basePitch.
   """
-  DiametralPitch(nTeeth::Int, pd::PitchDiameter) = DiametralPitch( nTeeth / convert(Inch, pd.measure)) # macro defines DiametralPitch{PerInch}(num), but this is the actual definition
+  DiametralPitch(nTeeth::Int, pd::PitchDiameter) = DiametralPitch( round(nTeeth / convert(Inch, pd.measure))) # macro defines DiametralPitch{PerInch}(num), but this is the actual definition
   @testitem "DiametralPitch" begin
     using UnitTypes
     dp = DiametralPitch(30, PitchDiameter(Inch(1.250)) )
+    @test dp.measure ≈ PerInch(24)
+
+    @show dp = DiametralPitch(30, PitchDiameter(Inch(1.23)) )
     @test dp.measure ≈ PerInch(24)
 
     dp = DiametralPitch(10, PitchDiameter(MilliMeter(50.8)) )
@@ -56,6 +54,8 @@ module GearDimensions
 
   #needs to follow DP definition
   """
+    $TYPEDSIGNATURES
+
     The diameter of the pitch circle which, when engaged with another gear has the same angular velocity as that other gear's pitch circle
   """
   PitchDiameter(dp::DiametralPitch, nTeeth::Int) = PitchDiameter( nTeeth / dp.measure )
@@ -63,13 +63,16 @@ module GearDimensions
 
   @makeDimension Addendum Inch
   """
-    height of tooth above pitch circle
+    $TYPEDSIGNATURES
+    Height of tooth above pitch circle.
   """
   Addendum(dp::DiametralPitch) = Addendum( 1/dp.measure )
 
   @makeDimension Dedendum Inch
   """
-    depth of tooth below pitch circle
+    $TYPEDSIGNATURES
+
+    Depth of tooth below pitch circle.
   """
   Dedendum(dp::DiametralPitch) = Dedendum( 1.250/dp.measure )
 
@@ -84,10 +87,13 @@ module GearDimensions
   # vs making a type and a custom constructor?
   @makeDimension OutsideDiameter Inch
   """
-    Outside diameter is the maximum diameter of the gear teeth
+    $TYPEDSIGNATURES
+
+    Outside diameter is the maximum diameter of the gear teeth.
   """
-  OutsideDiameter(pd::PitchDiameter, ad::Addendum) = OutsideDiameter( (pd + 2*ad) ) # () is a PitchDiameter, so we need to get the Inch measure
+  OutsideDiameter(pd::PitchDiameter, ad::Addendum) = OutsideDiameter(pd + 2*ad) # () is a PitchDiameter, so we need to get the Inch measure
   Base.:-(x::OutsideDiameter, y::PitchDiameter) = x.measure-y.measure
+  PitchDiameter(od::OutsideDiameter, nTeeth::Int) = od / (1 + 2/nTeeth) # coerce to int dp?
 
   @testitem "OutsideDiameter" begin
     using UnitTypes
@@ -103,8 +109,10 @@ module GearDimensions
 
   @makeDimension BaseDiameter Inch
   """
-    tooth involutes are perpendicular to this circle
-    in meshing gears, connecting two base circles with a tangent line will cross the involute teeth at the point of contact
+    $TYPEDSIGNATURES
+
+    Tooth involutes are perpendicular to this circle.
+    In meshing gears, connecting two base circles with a tangent line will cross the involute teeth at the point of contact.
   """
   BaseDiameter(pd::PitchDiameter, pressureAngle::U where U<: AbstractAngle) = BaseDiameter( pd.measure * cos(pressureAngle))
   Base.:-(x::OutsideDiameter, y::BaseDiameter) = x.measure-y.measure
@@ -119,7 +127,9 @@ module GearDimensions
 
   @makeDimension RootDiameter Inch
   """
-    Diameter of the circle touching the bottom lands between teeth
+    $TYPEDSIGNATURES
+
+    Diameter of the circle touching the bottom lands between teeth.
   """
   RootDiameter(pd::PitchDiameter, dd::Dedendum) = RootDiameter(pd.measure - 2*dd)
   @testitem "RootDiameter" begin
@@ -133,6 +143,8 @@ module GearDimensions
   end
 
   """
+    $TYPEDSIGNATURES
+
     The number of teeth on the gear described by `dp` and `pd`; note that this does not ensure that `dp` and `pd` are consistent, rounding to the nearest tooth!
   """
   nTeeth(dp::DiametralPitch, pd::PitchDiameter) = Int64(round( convert(PerInch,dp.measure).value * convert(Inch, pd.measure).value ))
@@ -149,7 +161,8 @@ module GearDimensions
 
   @makeDimension CircularPitch Inch
   """
-    the arc distance between similar points on the adjacent teeth in linear units along the arc segment
+    $TYPEDSIGNATURES
+    The arc distance between similar points on the adjacent teeth in linear units along the arc segment.
   """
   CircularPitch(pd::PitchDiameter, nTeeth) = CircularPitch(Inch(π*pd.measure.value / nTeeth))
   # circularPitch(diametralPitch) = π/diametralPitch
@@ -163,7 +176,9 @@ module GearDimensions
 
   @makeDimension GearModule MilliMeter
   """
-    module is the amount of pitch diameter per tooth, higher module larger tooth
+    $TYPEDSIGNATURES
+
+    Module is the amount of pitch diameter per tooth, higher module larger tooth.
   """
   GearModule(pd::PitchDiameter, nTeeth) = GearModule( convert(MilliMeter, pd.measure) / nTeeth )
   @testitem "GearModule" begin
@@ -175,7 +190,6 @@ module GearDimensions
     pd = PitchDiameter(MilliMeter(75.00))
     @test GearModule(pd, nt) ≈ mo
   end
-
 
 
 end

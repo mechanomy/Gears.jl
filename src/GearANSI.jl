@@ -2,6 +2,8 @@
 # As the full specification is not available, included here are the most basic and common parameters and calculations.
 
 """
+  $TYPEDSIGNATURES
+
   Struct to represent ANSI-specification spur gears.
 """
 struct GearANSI <: AbstractGear
@@ -22,7 +24,11 @@ struct GearANSI <: AbstractGear
   # workingDepth::UnitTypes.AbstractLength
   # clearance::UnitTypes.AbstractLength
 end
+export GearANSI
 
+"""
+  $TYPEDSIGNATURES
+"""
 function GearANSI(dp::DiametralPitch, nTeeth::Int, pa::UnitTypes.Degree=UnitTypes.Degree(20)) 
   pd = PitchDiameter(dp, nTeeth)
   bd = BaseDiameter(pd,pa)
@@ -33,6 +39,9 @@ function GearANSI(dp::DiametralPitch, nTeeth::Int, pa::UnitTypes.Degree=UnitType
   return GearANSI( nTeeth, pd, pa, dp, ad, dd, od, bd, rd)
 end
 
+"""
+  $TYPEDSIGNATURES
+"""
 function GearANSI(pd::PitchDiameter, nTeeth::Int, pa::UnitTypes.Degree=UnitTypes.Degree(20)) 
   dp = DiametralPitch(nTeeth, pd)
   bd = BaseDiameter(pd,pa)
@@ -42,7 +51,19 @@ function GearANSI(pd::PitchDiameter, nTeeth::Int, pa::UnitTypes.Degree=UnitTypes
   rd = RootDiameter(pd, dd)
   return GearANSI( nTeeth, pd, pa, dp, ad, dd, od, bd, rd)
 end
-export GearANSI
+
+"""
+  $TYPEDSIGNATURES
+"""
+function GearANSI(od::OutsideDiameter, nTeeth::Int, pa::UnitTypes.Degree=UnitTypes.Degree(20)) 
+  pd = od2pd
+  dp = DiametralPitch(nTeeth, pd)
+  bd = BaseDiameter(pd,pa)
+  ad = Addendum(dp)
+  dd = Dedendum(dp)
+  rd = RootDiameter(pd, dd)
+  return GearANSI( nTeeth, pd, pa, dp, ad, dd, od, bd, rd)
+end
 
 @testitem "GearANSI" begin
   using UnitTypes
@@ -70,9 +91,10 @@ export GearANSI
 end
 
 """
-    pulley2String(p::PlainPulley) :: String
-  Returns a descriptive string of the given PlainPulley `p` of the form:
-    PlainPulley[struct] @ [1.000mm,2.000mm] r[3.000mm] arrive[57.296°] depart[114.592°] aWrap[57.296°] lWrap[3.000mm]"
+  $TYPEDSIGNATURES
+
+  Returns a descriptive string of gear `g`, of the form:
+    `GearANSI: 30tooth Gears.GearDimensions.PitchDiameter(1.25in)`
 """
 function gear2String(g::GearANSI)::String 
   # return @sprintf("GearANSI:\n nTeeth: %d \n pressureAngleDegree: %3.3f[°] \n pitchDiameterInch: %3.3f[in], diametralPitch: %3.3f[1/in]",
@@ -86,11 +108,12 @@ end
 @testitem "gear2String" begin
   using UnitTypes
   g = GearANSI(PitchDiameter(Inch(1.2500)), 30, Degree(20))
-  # @test Gears.gear2String(g) === "GearANSI: 30tooth Gears.PitchDiameter(1.25in)"
   @test Gears.gear2String(g) === "GearANSI: 30tooth Gears.GearDimensions.PitchDiameter(1.25in)"
 end
 
 """
+  $TYPEDSIGNATURES
+
   Function to `show()` a GearANSI via [`gear2String()`](@ref)
 """
 function Base.show(io::IO, g::GearANSI)

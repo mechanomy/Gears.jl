@@ -15,13 +15,18 @@ module InvoluteTooth # this submodule provides functions for drawing gear involu
   # Angle theta is geometrically interpreted as the point on the base circle whose tangent line is also perpendicular to the involute, as shown in plotInvoluteConstruction.
 
   """
-    Calculates the x coordinate of a point along the involute
+    $TYPEDSIGNATURES
+
+    Calculates the x coordinate of a point along the involute.
     Note that the handedness of the involute is determined by th-al: if th-al>0 a right hand involute, th-al<0 is a left hand
   """
   ix(bd::BaseDiameter, al::AbstractAngle, th::AbstractAngle) = (bd.measure/2*( cos(th) + convert(Radian,th-al).value*sin(th) ) )# returns an AbstractLength...
 
   """
-    Calculates the y coordinate of a point along the involute
+    $TYPEDSIGNATURES
+
+    Calculates the y coordinate of a point along the involute.
+    Note that the handedness of the involute is determined by th-al: if th-al>0 a right hand involute, th-al<0 is a left hand
   """
   iy(bd::BaseDiameter, al::AbstractAngle, th::AbstractAngle) = (bd.measure/2*( sin(th) - convert(Radian,th-al).value*cos(th) ))
   @testitem "involute calcs" begin
@@ -31,44 +36,85 @@ module InvoluteTooth # this submodule provides functions for drawing gear involu
   end
 
   """
+    $TYPEDSIGNATURES
+
     Gamma is the angle of the line of symmetry of `iTooth` for a complete gear with `nTeeth`
   """
   gamma(nTeeth::Int, iTooth::Int) = Radian(2*π/nTeeth*iTooth) #gamma is the angle of the line of the tooth center
 
   """
-    Calculates the angular tooth width at the pitch diameter = pi/(2*Nteeth).
-    See Dooner#61.
-  """
-  toothAngularWidthAtPitchDiameter(g::AbstractGear) = Radian(π/2/g.nTeeth)
-
-  """
-    Finds the angle when the involute has risen `toothHeight` above `r`
-    
     $TYPEDSIGNATURES
 
-    Gamma is the angle of the tooth's line of symmetry
-    Alpha is the angle of the involute's root on the base circle
-    toothHeight is the desired radial height of the tooth beyond the base circle
+    Calculates the angular tooth width at the pitch diameter = pi/(2*Nteeth).
+  """
+  toothAngularWidthAtPitchDiameter(g::AbstractGear) = Radian(π/2/g.nTeeth) #See Dooner#61.
+
+  """
+    $TYPEDSIGNATURES
+
+    Finds the angle when the involute has risen `rDesired` above the base diameter
+    `bd` is the base diameter
+    `gm` is the angle of the tooth's line of symmetry
+    `al` is the angle of the involute's root on the base circle
+    `rDesired` is the desired radial height of the tooth beyond the base circle
   """
   function findInvoluteAngleAtRadius(;bd::BaseDiameter, gm::AbstractAngle, al::AbstractAngle, rDesired::AbstractLength)
-    ix2(th) = toBaseFloat(ix(bd,al,th))*toBaseFloat(ix(bd,al,th))
-    iy2(th) = toBaseFloat(iy(bd,al,th))*toBaseFloat(iy(bd,al,th))
-    rinv(th) = sqrt(ix2(th) + iy2(th))
-    fal(th) = toBaseFloat(rDesired) - rinv(Radian(th))
-    thDesired = Radian(find_zero(fal, convert(Radian,gm).value + convert(Radian,gm-al).value*2))
+    if rDesired > bd.measure/2
+      ix2(th) = toBaseFloat(ix(bd,al,th))*toBaseFloat(ix(bd,al,th))
+      iy2(th) = toBaseFloat(iy(bd,al,th))*toBaseFloat(iy(bd,al,th))
+      fal(th) = toBaseFloat(rDesired)^2 - ix2(Radian(th)) -iy2(Radian(th))
+      thDesired = Radian(find_zero(fal, convert(Radian,gm).value + convert(Radian,gm-al).value*2))
+    else 
+      @warn "In this domain, where rDesired $rDesired < base radius $(bd.measure/2), a profile shift or undercut is likely desired, not implemented"
+      thDesired = al
+    end
     return thDesired
+  end
+
+  """
+    $TYPEDSIGNATURES
+
+    Finds the angle when the involute has risen `rDesired` above the gear's base diameter.
+    `g` is the gear
+    `rDesired` is the desired radial height of the tooth beyond the base circle
+  """
+  function findInvoluteAngleAtRadius(g::AbstractGear, rDesired::AbstractLength)
+    gm = gamma(g.nTeeth, 0)
+    al = gm-toothAngularWidthAtPitchDiameter(g)
+    return findInvoluteAngleAtRadius(bd=g.base, gm=gm, al=al, rDesired=rDesired )
   end
   @testitem "findInvoluteAngleAtRadius" begin
     using UnitTypes
 
     g = GearANSI( PitchDiameter(Inch(2.9167)), 70, Degree(20) ) #sdpsi_S1268Z-024A070
-    alBase = Radian(1)
-    gm = Radian(1.2)
+    gm = Gears.InvoluteTooth.gamma(g.nTeeth, 0)
+    al = gm-Gears.InvoluteTooth.toothAngularWidthAtPitchDiameter(g)
+    @test isapprox( Gears.InvoluteTooth.findInvoluteAngleAtRadius(bd=g.base, gm=gm, al=al, rDesired=g.outside.measure/2), Radian(0.422656), atol=1e-3)
+    @test isapprox( Gears.InvoluteTooth.findInvoluteAngleAtRadius(g, g.outside.measure/2), Radian(0.422656), atol=1e-3)
 
-    @test isapprox( Gears.InvoluteTooth.findInvoluteAngleAtRadius(bd=g.base, gm=gm, al=alBase, rDesired=g.outside.measure/2), Radian(1.445), atol=1e-3)
+    # certain rDesired are smaller than the base diameter, due to root < base, for which I need to find a better reference
+    a = Gears.InvoluteTooth.findInvoluteAngleAtRadius(bd=BaseDiameter(Inch(1.1746)), gm=Radian(0.20944), al=Radian(0.1422), rDesired=Inch(0.5729))
+    @test isapprox(a, Radian(0.1422), atol=1e-3)
+
+    # using UnitTypes
+    # using GLMakie
+    # g = GearANSI( PitchDiameter(Inch(2.9167)), 70, Degree(20) ) #sdpsi_S1268Z-024A070
+    # g = GearANSI( PitchDiameter(Inch(1.7500)), 42, Degree(20) ) #sdpsi_10A9Z-024H030
+    # g = GearANSI( PitchDiameter(Inch(1.5000)), 36, Degree(20) ) #sdpsi_10A9Z-024H030 # root < base begins here 
+    # g = GearANSI( PitchDiameter(Inch(1.2500)), 30, Degree(20) ) #sdpsi_10A9Z-024H030
+    # g = GearANSI( PitchDiameter(Inch(1.0000)), 24, Degree(20) ) #sdpsi_10A9Z-024H024
+    # g = GearANSI( PitchDiameter(Inch(0.8750)), 21, Degree(20) ) #sdpsi_10A9Z-024H021
+    # g = GearANSI( PitchDiameter(Inch(0.8333)), 20, Degree(20) ) #sdpsi_10A9Z-024H020
+    # g = GearANSI( PitchDiameter(Inch(0.7500)), 18, Degree(20) ) #sdpsi_10A9Z-024H018
+    # println("$(g.nTeeth):\n$(g.base)\n$(g.root)\n$(g.pitch)\n$(g.outside)")
+    # fig = Gears.InvoluteTooth.plotInvoluteConstruction(g)
+    # fig = Gears.InvoluteTooth.plotGearTeeth(g, fig)
+    # display(fig)
   end
 
   """
+    $TYPEDSIGNATURES
+
     Returns (x,y) positions tracing the gear teeth for gear `g`. 
     (x,y) is a vector of Measures which <:AbstractLength.
   """
@@ -87,6 +133,7 @@ module InvoluteTooth # this submodule provides functions for drawing gear involu
       alPitch = gm - toothAngularWidthAtPitchDiameter(g) #cf fig2.4 2012Dooner
       alBase = alPitch - vpsi 
       thOutside = findInvoluteAngleAtRadius(bd=g.base, gm=gm, al=alBase, rDesired=g.outside.measure/2) # this is the angle of the involute tip at the outside diameter
+      # println("about to findInvolute($(g.base), $gm, $alBase, $(g.root.measure/2))")
       thRoot = findInvoluteAngleAtRadius(bd=g.base, gm=gm, al=alBase, rDesired=g.root.measure/2)
       ths = Radian.(LinRange(convert(Radian,thRoot).value, convert(Radian,thOutside).value, nPerInvolute))
       for j = 1:nPerInvolute
@@ -130,9 +177,9 @@ module InvoluteTooth # this submodule provides functions for drawing gear involu
   end
 
   """
-    Writes a file of points tracing the outer edge of the gear teeth.
-
     $TYPEDSIGNATURES
+
+    Writes a file of points tracing the outer edge of the gear teeth.
 
     * `g` the Gear to write
     * `fileName` optional file name, if not provided will be named "gearProfilePoints_diametralPitch_nTeeth"*fileExtension
@@ -255,7 +302,13 @@ module InvoluteTooth # this submodule provides functions for drawing gear involu
       # @test l1 == "34.78722899491671mm\t-8.105983123125842mm\t0.0mm"
     end   
   end
+  # =#
 
+  """
+    $TYPEDSIGNATURES
+
+    Returns x,y arrays for an arc between angles.
+  """
   function arcXY(; r::AbstractLength, a0::AbstractAngle, a1::AbstractAngle, n=100)
     ths = LinRange(convert(Radian,a0).value, convert(Radian,a1).value, n) 
     xs = r.value .*cos.(ths)
@@ -264,7 +317,9 @@ module InvoluteTooth # this submodule provides functions for drawing gear involu
   end
 
   """
-    Plots the arc between angles
+    $TYPEDSIGNATURES
+
+    Plots the arc between angles.
   """
   function plotArc(; axs, r::AbstractLength, a0::AbstractAngle, a1::AbstractAngle, n=100, label="", linecolor=:gray, linestyle=:solid, fontsize=10)
     (xs,ys) = arcXY(r=r, a0=a0, a1=a1, n=n)
@@ -276,7 +331,9 @@ module InvoluteTooth # this submodule provides functions for drawing gear involu
   end
 
   """
-    Plots an involute of the circle
+    $TYPEDSIGNATURES
+
+    Plots an involute of the circle.
   """
   function plotInvolute(; bd::BaseDiameter, al::AbstractAngle, thMax::AbstractAngle, axs=nothing, linecolor=:blue, linestyle=:solid)
     if isnothing(axs)
@@ -304,6 +361,8 @@ module InvoluteTooth # this submodule provides functions for drawing gear involu
   end
 
   """
+    $TYPEDSIGNATURES
+
     Plots two lines that explain the construction of the involute at the given angle.
   """
   function plotInvoluteConstruction(; bd::BaseDiameter, al::AbstractAngle, th::AbstractAngle, axs=nothing, linecolor=:gray, linestyle=:solid)
@@ -326,6 +385,11 @@ module InvoluteTooth # this submodule provides functions for drawing gear involu
     return l
   end
 
+  """
+    $TYPEDSIGNATURES
+
+    Plots an arc between `aMin` and `aMax` at radius `r`.
+  """
   function plotAngleArc(; axs, r::AbstractLength, aMax::AbstractAngle, aMin::AbstractAngle=Radian(0), label="angleArc@$aMax", aLabel::AbstractAngle=aMax/2, linecolor=:gray, linestyle=:solid, fontsize=10)
     ths = Radian.(LinRange(convert(Radian,aMin).value, convert(Radian,aMax).value, 100))
     xs = r.value .* cos.(ths)
@@ -335,6 +399,11 @@ module InvoluteTooth # this submodule provides functions for drawing gear involu
     return s
   end
 
+  """
+    $TYPEDSIGNATURES
+
+    Plots a radial line of length `r` at angle `a` and an arc from 0 to `a` at radius `rAngle`.
+  """
   function plotAngleLine(;axs, r::AbstractLength, a::AbstractAngle, rAngle::AbstractLength=r*.8, label="", linecolor=:gray, linestyle=:solid, fontsize=10)
     plotAngleArc(axs=axs, r=rAngle, aMax=a, aMin=Radian(0), label=label )
     lines!(axs, [0,r.value*cos(a)], [0,r.value*sin(a)], color=linecolor, linestyle=linestyle, label=label)
@@ -344,7 +413,9 @@ module InvoluteTooth # this submodule provides functions for drawing gear involu
   end
 
   """
-    This function draws an annottated plot showing the key geometric relations for the given Gear `g`.
+    $TYPEDSIGNATURES
+
+    Draws an annottated plot showing the key geometric relations involved in the construction of tooth `toothNumber` of gear `g`.
   """
   function plotInvoluteConstruction(g::AbstractGear, toothNumber=Int(round(g.nTeeth/8)), fig=nothing )
     un = Inch #unit for x and y
@@ -359,7 +430,7 @@ module InvoluteTooth # this submodule provides functions for drawing gear involu
     end
     
     gm = gamma(g.nTeeth, toothNumber) #gamma is the tooth centerline
-    gmExtra = 0.2
+    gmExtra = Radian(0.2)
     plotArc(axs=axs, r=g.base.measure/2, a0=gm-gmExtra, a1=gm+gmExtra, label="base", linecolor=:black)
     plotArc(axs=axs, r=g.root.measure/2, a0=gm-gmExtra, a1=gm+gmExtra, label="root", linecolor=:blue)
     plotArc(axs=axs, r=g.pitch.measure/2, a0=gm-gmExtra, a1=gm+gmExtra, label="pitch", linecolor=:green)
@@ -422,11 +493,9 @@ module InvoluteTooth # this submodule provides functions for drawing gear involu
   end
 
   """
-    Plots both sides to form a tooth
-    r is the root diameter
-    gamma is the center angle of the tooth
-    delta is the angular width of the tooth at the root diameter
-    height is the tooth height, or the difference between the outside and root diameters
+    $TYPEDSIGNATURES
+
+    Plots all teeth and valleys for gear `g` about 0,0.
   """
   function plotGearTeeth( g::AbstractGear, fig=nothing)
     un = Inch #unit for x and y
@@ -462,5 +531,4 @@ module InvoluteTooth # this submodule provides functions for drawing gear involu
     # display(GLMakie.Screen(), fig) # note the window only lasts as long as the julia session
     @test true
   end
-
 end #InvoluteTooth

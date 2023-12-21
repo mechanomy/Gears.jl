@@ -1,5 +1,5 @@
 # Gears.jl
-This package models Gears generally, including:
+This package models basic spur gears, including:
 * functions for calculating involute tooth profiles
 * working with gear parameters and handbook equations
 * gear standards
@@ -7,22 +7,31 @@ This package models Gears generally, including:
 
 As these encompass a lot of terrain, the aim is not to be comprehensive but immediately useful, supporting quick prototyping of gears especially through 3D printing.
 
-## Basic example
+![](./gear.png)
 
+## Examples
 
-<!-- GearTransmissions.jl uses this package to model gear trains in various configurations. -->
+### Plot a gear profile
+```julia
+using UnitTypes
+using GLMakie
+g = GearANSI( PitchDiameter(Inch(2.9167)), 70, Degree(20) ) 
+fig = Gears.InvoluteTooth.plotInvoluteConstruction(g)
+fig = Gears.InvoluteTooth.plotGearTeeth(g, fig)
+display(fig)
+```
 
-
-
-
+### Write gear profile points to a file
+```julia
+using UnitTypes
+g = GearANSI( PitchDiameter(Inch(2.9167)), 70, Degree(20) ) 
+Gears.InvoluteTooth.writeToothProfilePoints(g, fileName= "testProfilePoints.txt") 
+```
 
 ## References
+* 2012 Dooner "Kinematic Geometry of Gearing"
 
-* 2012 Dooner 
-
-* 2012 Jelaska "Gears and Drives"  
-
-### Gear Technology has a great archive:
+<!-- Gear Technology has a great archive:
 
 * [Design of Involute Gear Teeth](https://www.geartechnology.com/articles/20828-design-of-involute-gear-teeth)
 _1984_Fellows_DesignOfInvoluteGearTeeth.pdf_
@@ -37,6 +46,7 @@ _1984_Orthwein_DeterminationOfGearRatios.pdf_
 _1985_ChenJuarbe_
 
 * 1985 https://www.geartechnology.com/articles/20103-finding-gear-teeth-ratios
+
 * 1985 https://www.geartechnology.com/articles/20181-gear-inspection-and-chart-interpretation
 
 * [Involumetry](https://www.geartechnology.com/articles/20938-involutometry)
@@ -49,9 +59,10 @@ _1988_vanGerpenReece_InvolumetryIllustrations.pdf_
 _1989_Hindhede_SpurGearFundamentals.pdf_
 
 * [Dudley's Handbook of Practical Gear Design and Manufacture](https://www.google.com/books/edition/Dudley_s_Handbook_of_Practical_Gear_Desi/mLUclpsfTeQC?hl=en)
-_2012_Radzevich_DudleysHnadbookOfPracticalGearDesignAndManufacture_
+_2012_Radzevich_DudleysHnadbookOfPracticalGearDesignAndManufacture_ -->
 
 
 ## Copyright
 Copyright (c) 2022 Mechanomy LLC
 
+Released under MIT.
